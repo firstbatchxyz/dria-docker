@@ -15,4 +15,6 @@ export default {
   ARWEAVE_PORT: 3169,
   /** How many fetches at once should be made to download Bundlr data? FBS stands for "Fetch Batch Size". */
   BUNDLR_FBS: parseInt(process.env.BUNDLR_FBS || "40"),
+  /** Base URL for Bundlr downloads. */
+  DOWNLOAD_BASE_URL: "https://arweave.net",
 } as const;

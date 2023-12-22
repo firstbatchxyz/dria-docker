@@ -20,6 +20,8 @@ services:
     environment:
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_TXID=${CONTRACT}
+      - USE_BUNDLR=true # true if your contract uses Bundlr
+      - USE_HTX=true # true if your contract stores values as `hash.txid`
     depends_on:
       - redis
 

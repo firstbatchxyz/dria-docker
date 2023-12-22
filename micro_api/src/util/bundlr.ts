@@ -8,7 +8,7 @@ export async function downloadFromBundlr<V>(txid: string) {
   if (config.USE_HTX) {
     txid = txid.split(".")[1];
   }
-  const url = `https://arweave.net/${txid}`;
+  const url = `${config.DOWNLOAD_BASE_URL}/${txid}`;
   // const response = await fetch(url);
   const response = await axios.get(url, {
     timeout: 50_000, // 50 sec timeout

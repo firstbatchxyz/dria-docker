@@ -113,6 +113,7 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
     console.log("> Config:\n", config);
     console.log(`> Redis: ${config.REDIS_URL}`);
     console.log(`> Wallet: ${config.WALLET_PATH}`);
+    console.log(`> Download URL: ${config.DOWNLOAD_BASE_URL}`);
     console.log(`> Contract: https://sonar.warp.cc/#/app/contract/${contractTxId}`);
   });
   LoggerFactory.INST.logLevel(config.WARP_LOG_LEVEL);
