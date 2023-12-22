@@ -6,6 +6,9 @@ services:
   #   build: ./dria_hnsw
   #   ports:
   #     - "8080:8080"
+  #   depends_on:
+  #     - micro-api
+  #     - redis
 
   # Micro API for HollowDB
   micro-api:
@@ -13,10 +16,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./config/wallet.json:/app/config/wallet.json
+      - ${WALLET}:/app/config/wallet.json
     environment:
       - REDIS_URL=redis://default:redispw@redis:6379
-      - CONTRACT_TXID=${CONTRACT_TXID}
+      - CONTRACT_TXID=${CONTRACT}
     depends_on:
       - redis
 
