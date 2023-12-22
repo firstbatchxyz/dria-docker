@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package index_buffer;
+
+
+message LayerNode {
+  uint32 level = 1; // Using uint64 as a safe alternative for usize
+  uint32 idx = 2; // Using uint64 as a safe alternative for usize
+  map<uint32, float> neighbors = 3; // Neighbor idx and its distance
+}
+
+
+message Point {
+  uint32 idx = 1; // Using uint64 as a safe alternative for usize
+  repeated float v = 2; // Vector of floats
+}
