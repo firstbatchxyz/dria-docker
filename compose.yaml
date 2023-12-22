@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  # Dria HNSW Rust code
+  # dria-hnsw:
+  #   build: ./dria_hnsw
+  #   ports:
+  #     - "8080:8080"
+
+  # Micro API for HollowDB
+  micro-api:
+    build: ./micro_api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config/wallet.json:/app/config/wallet.json
+    environment:
+      - REDIS_URL=redis://default:redispw@redis:6379
+      - CONTRACT_TXID=${CONTRACT_TXID}
+    depends_on:
+      - redis
+
+  # Redis Container
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379"
+    volumes:
+      - "./redis.conf:/app/redis.conf:ro"
+    command: redis-server /app/redis.conf
