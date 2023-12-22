@@ -2,13 +2,13 @@ version: "3.8"
 
 services:
   # Dria HNSW Rust code
-  # dria-hnsw:
-  #   build: ./dria_hnsw
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     - micro-api
-  #     - redis
+  dria-hnsw:
+    build: ./dria_hnsw
+    ports:
+      - "8080:8080"
+    depends_on:
+      - micro-api
+      - redis
 
   # Micro API for HollowDB
   micro-api:
