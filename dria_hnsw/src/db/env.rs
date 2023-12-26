@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::env;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -14,15 +15,33 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> Config {
-        Config{
-            env: "development".to_string(),
-            debug: true,
-            pk_length: 0,
-            sk_length: 0,
-            rate_limit: "".to_string(),
-            global_rate_limit: "".to_string(),
-            logging_level: "DEBUG".to_string(),
-            redis_url: "redis://127.0.0.1/".to_string(),
+
+        match env::var("REDIS_URL") {
+            Ok(redis_url) => {
+                Config {
+                    env: "development".to_string(),
+                    debug: true,
+                    pk_length: 0,
+                    sk_length: 0,
+                    rate_limit: "".to_string(),
+                    global_rate_limit: "".to_string(),
+                    logging_level: "DEBUG".to_string(),
+                    redis_url,
+                }
+            }
+            Err(_) => {
+                Config {
+                    env: "development".to_string(),
+                    debug: true,
+                    pk_length: 0,
+                    sk_length: 0,
+                    rate_limit: "".to_string(),
+                    global_rate_limit: "".to_string(),
+                    logging_level: "DEBUG".to_string(),
+                    redis_url: "redis://127.0.0.1/".to_string(),
+                }
+            }
+
         }
     }
 }
