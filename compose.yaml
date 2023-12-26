@@ -2,43 +2,47 @@ version: "3.8"
 
 services:
   # Dria HNSW Rust code
+  # depends on Micro API wait-for to complete
   dria-hnsw:
     build: ./dria_hnsw
     ports:
       - "8080:8080"
     depends_on:
-      micro-api:
-        condition: service_healthy
-      redis:
-        condition: service_started
+      micro-api-wait:
+        condition: service_completed_successfully
+
+  # Micro API 'wait-for' script
+  # will complete when it makes sure Micro has refreshed everything
+  # depends on Micro API to start
+  micro-api-wait:
+    build: ./micro_api_wait
+    environment:
+      - TARGET=micro-api:3000
+    depends_on:
+      - micro-api
 
   # Micro API for HollowDB
+  # depends on Redis to start
   micro-api:
     build: ./micro_api
     ports:
       - "3000:3000"
+    expose:
+      - "3000" # used by Micro API wait-for script
     volumes:
       - ${WALLET}:/app/config/wallet.json
     environment:
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_TXID=${CONTRACT}
-      - USE_BUNDLR=false # true if your contract uses Bundlr
-      - USE_HTX=false # true if your contract stores values as `hash.txid`
-    healthcheck:
-      # this curl will return 503 when refresh is not yet completed
-      # prettier-ignore
-      test: ["CMD", "curl", "-f", "-d", '{"route": "STATE"}', "http://localhost:3000/"]
-      interval: 10s
-      retries: 999999
-      start_period: 1m
-      start_interval: 5s
+      - USE_BUNDLR=true # true if your contract uses Bundlr
+      - USE_HTX=true # true if your contract stores values as `hash.txid`
     depends_on:
       - redis
 
   # Redis Container
   redis:
     image: "redis:alpine"
-    ports:
+    expose:
       - "6379"
     volumes:
       - "./redis.conf:/app/redis.conf:ro"

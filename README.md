@@ -12,7 +12,16 @@ Or, you can put these into an `.env` and do:
 source .env && docker compose up
 ```
 
+Or if you are really sure about your wallet and/or contract id, you can hardcode them within the Docker compose [file](./compose.yaml).
+
 ## Containers
+
+When everything is up, you will have access to both Dria and HollowDB:
+
+- Dria HNSW is live at port 8080
+- HollowDB Micro API is live at port 3030
+
+### Setup
 
 There are three containers here:
 
