@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use actix_web::{web, App, HttpServer};
-use actix_web::middleware::Logger;
-use dria_hnsw::worker::{fetch, query,insert ,get_health_status, get_health_status2};
 use actix_cors::Cors;
+use actix_web::middleware::Logger;
+use actix_web::{web, App, HttpServer};
+use dria_hnsw::worker::{fetch, get_health_status, get_health_status2, insert, query};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 //use lambda_web::{run_actix_on_lambda};
 //use userembeddings::middlewares::ext_client::ExternalClient;
@@ -24,8 +24,6 @@ parallelism**
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-
-
     let factory = move || {
         App::new()
             //.wrap(ExternalClient)
@@ -34,7 +32,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Cors::permissive())
     };
 
+    println!("Dria HNSW listening...");
     HttpServer::new(factory).bind("0.0.0.0:8080")?.run().await?;
     Ok(())
-
 }

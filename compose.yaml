@@ -7,8 +7,10 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - micro-api
-      - redis
+      micro-api:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   # Micro API for HollowDB
   micro-api:
@@ -20,8 +22,16 @@ services:
     environment:
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_TXID=${CONTRACT}
-      - USE_BUNDLR=true # true if your contract uses Bundlr
-      - USE_HTX=true # true if your contract stores values as `hash.txid`
+      - USE_BUNDLR=false # true if your contract uses Bundlr
+      - USE_HTX=false # true if your contract stores values as `hash.txid`
+    healthcheck:
+      # this curl will return 503 when refresh is not yet completed
+      # prettier-ignore
+      test: ["CMD", "curl", "-f", "-d", '{"route": "STATE"}', "http://localhost:3000/"]
+      interval: 10s
+      retries: 999999
+      start_period: 1m
+      start_interval: 5s
     depends_on:
       - redis
 
