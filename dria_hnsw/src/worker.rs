@@ -131,7 +131,7 @@ pub async fn insert(req:HttpRequest, payload: Json<InsertModel>) -> HttpResponse
 
 fn ef_helper(ef: Option<usize>)->usize{
     let level = ef.clone().unwrap_or(1);
-    level * 100
+    20 + (level * 30)
 }
 
 
