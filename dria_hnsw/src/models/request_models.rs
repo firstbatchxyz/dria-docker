@@ -11,6 +11,13 @@ pub struct InsertModel{
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct InsertBatchModel{
+    pub data: String,
+    pub contract_id: String,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct FetchModel{
     pub id: Vec<u32>,
     pub contract_id: String,

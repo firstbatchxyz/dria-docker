@@ -91,7 +91,7 @@ impl RedisClient {
         Ok(())
     }
 
-    pub fn get_points(&mut self, indices: Vec<u32>) -> Result<Vec<Point>, DeserializeError> {
+    pub fn get_points(&mut self, indices: &Vec<u32>) -> Result<Vec<Point>, DeserializeError> {
         let keys = indices.iter().map(|x| x.to_string()).collect::<Vec<String>>();
 
         if keys.is_empty() {
@@ -105,6 +105,20 @@ impl RedisClient {
             Ok(p)
         }).collect::<Result<Vec<Point>, DeserializeError>>()?;
         Ok(points)
+    }
+
+    pub fn add_points_batch(&mut self, v: &Vec<Vec<f32>>, start_idx: usize) -> Result<(), DeserializeError> {
+        let mut pairs = Vec::new();
+
+        for (i, p) in v.iter().enumerate() {
+            let idx = start_idx + i;
+            let p = Point::new(p.clone(), idx);
+            let p_str = point_to_base64(&p);
+            pairs.push((idx.to_string(), p_str));
+        }
+
+        let _ = self.connection.mset(pairs.as_slice()).map_err(|_| DeserializeError::RedisConnectionError)?;
+        Ok(())
     }
 
     pub fn add_points(&mut self, v: Vec<f32>, idx: usize) -> Result<(), DeserializeError> {
@@ -152,22 +166,33 @@ impl RedisClient {
         Ok(ep)
     }
 
+    pub fn set_metadata_batch(&mut self, metadata: Vec<Value>, idx: usize) -> Result<(), DeserializeError> {
+        let mut pairs = Vec::new();
+        for (i, m) in metadata.iter().enumerate() {
+            let key = format!("m:{}", idx + i);
+            let metadata_str = serde_json::to_string(&m).unwrap();
+            pairs.push((key, metadata_str));
+        }
+        let _ = self.connection.mset(pairs.as_slice()).map_err(|_| DeserializeError::RedisConnectionError)?;
+        Ok(())
+    }
+
     pub fn set_metadata(&mut self, metadata: Value, idx: usize) -> Result<(), DeserializeError> {
-        let key = format!("{}:m", idx);
+        let key = format!("m:{}", idx);
         let metadata_str = serde_json::to_string(&metadata).unwrap();
         self.set(key, metadata_str)?;
         Ok(())
     }
 
     pub fn get_metadata(&mut self, idx: usize) -> Result<Value, DeserializeError> {
-        let key = format!("{}:m", idx);
+        let key = format!("m:{}", idx);
         let metadata_str: String = self.connection.get(&key).map_err(|_| DeserializeError::RedisConnectionError)?;
         let metadata: Value = serde_json::from_str(&metadata_str).unwrap();
         Ok(metadata)
     }
 
     pub fn get_metadatas(&mut self, indices: Vec<u32>) -> Result<Vec<Value>, DeserializeError> {
-        let keys = indices.iter().map(|x| format!("{}:m", x)).collect::<Vec<String>>();
+        let keys = indices.iter().map(|x| format!("m:{}", x)).collect::<Vec<String>>();
 
         let metadata_str: Vec<String> = self.connection.mget(&keys).map_err(|_| DeserializeError::RedisConnectionError)?;
 

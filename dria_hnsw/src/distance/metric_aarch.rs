@@ -2,7 +2,7 @@ use core::arch::aarch64::*;
 
 #[cfg(all(target_feature = "neon",))]
 #[inline(always)]
-pub(crate) unsafe fn l2_similarity_aarch(arr_a: &[f32], arr_b: &[f32]) -> f32 {
+pub unsafe fn l2_similarity_aarch(arr_a: &[f32], arr_b: &[f32]) -> f32 {
     // 0.0
     // let niters = (length / 4) as isize;
     // let mut sum: float32x4_t = vdupq_n_f32(0.0f32);
@@ -72,6 +72,46 @@ pub(crate) unsafe fn l1_similarity_aarch(arr_a: &[f32], arr_b: &[f32]) -> f32 {
     }
     let result = vaddvq_f32(sum1) + vaddvq_f32(sum2) + vaddvq_f32(sum3) + vaddvq_f32(sum4);
     result
+}
+
+#[inline]
+#[target_feature(enable = "neon")]
+pub unsafe fn cosine_similarity_aarch(x: &[f32], y: &[f32]) -> f32 {
+    use std::arch::aarch64::*;
+
+    let len = x.len().min(y.len());
+    let mut pp = 0.0_f32; // Sum of squares for x
+    let mut qq = 0.0_f32; // Sum of squares for y
+    let mut pq = 0.0_f32; // Dot product of x and y
+
+    let zero = vdupq_n_f32(0.0); // Set all elements to 0.0
+    let mut sum_pp = zero;
+    let mut sum_qq = zero;
+    let mut sum_pq = zero;
+
+    // SIMD loop
+    let simd_len = len / 4 * 4;
+    for i in (0..simd_len).step_by(4) {
+        let x_simd = vld1q_f32(x.as_ptr().add(i));
+        let y_simd = vld1q_f32(y.as_ptr().add(i));
+
+        sum_pp = vfmaq_f32(sum_pp, x_simd, x_simd); // sum_pp += x[i] * x[i];
+        sum_qq = vfmaq_f32(sum_qq, y_simd, y_simd); // sum_qq += y[i] * y[i];
+        sum_pq = vfmaq_f32(sum_pq, x_simd, y_simd); // sum_pq += x[i] * y[i];
+    }
+
+    pp += vaddvq_f32(sum_pp); // Horizontal add for sum_pp
+    qq += vaddvq_f32(sum_qq); // Horizontal add for sum_qq
+    pq += vaddvq_f32(sum_pq); // Horizontal add for sum_pq
+
+    // Handle remaining elements
+    for i in simd_len..len {
+        pp += x[i] * x[i];
+        qq += y[i] * y[i];
+        pq += x[i] * y[i];
+    }
+
+    1.0 - pq / (pp.sqrt() * qq.sqrt())
 }
 
 #[cfg(all(target_feature = "neon",))]

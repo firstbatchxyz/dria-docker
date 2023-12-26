@@ -1,4 +1,5 @@
 use crate::proto::index_buffer::{Point, LayerNode};
+use crate::proto::request_buffer::{Batch, Singleton};
 use prost::Message;
 
 
@@ -29,5 +30,20 @@ pub fn base64_to_node(e_node: &str) -> LayerNode {
 
     let bytes = base64::decode(e_node).unwrap();
     let node = LayerNode::decode(bytes.as_slice()).unwrap(); // Deserialize
+    node
+}
+
+
+pub fn base64_to_batch(batch: &str) -> Batch {
+
+    let bytes = base64::decode(batch).unwrap();
+    let node = Batch::decode(bytes.as_slice()).unwrap(); // Deserialize
+    node
+}
+
+pub fn base64_to_singleton(singleton: &str) -> Singleton {
+
+    let bytes = base64::decode(singleton).unwrap();
+    let node = Singleton::decode(bytes.as_slice()).unwrap(); // Deserialize
     node
 }

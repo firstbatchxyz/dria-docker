@@ -61,6 +61,49 @@ pub(crate) unsafe fn l1_similarity_avx(arr_a: &[f32], arr_b: &[f32]) -> f32 {
     result
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "avx"))]
+#[inline(always)]
+pub (crate) unsafe fn cosine_similarity_avx(arr_a: &[f32], arr_b: &[f32]) -> f32 {
+    let n = arr_a.len();
+    let m = n / 8; // Process 8 elements at a time with AVX
+    let mut sum1 = _mm256_setzero_ps(); // Accumulator 1 for dot product
+    let mut sum2 = _mm256_setzero_ps(); // Accumulator 2 for magnitude of arr_a
+    let mut sum3 = _mm256_setzero_ps(); // Accumulator 3 for magnitude of arr_b
+
+    let mut i = 0;
+    while i < m {
+        let vec_a = _mm256_loadu_ps(arr_a.as_ptr().add(i * 8));
+        let vec_b = _mm256_loadu_ps(arr_b.as_ptr().add(i * 8));
+
+        sum1 = _mm256_fmadd_ps(vec_a, vec_b, sum1); // sum1 += vec_a * vec_b
+
+        sum2 = _mm256_fmadd_ps(vec_a, vec_a, sum2); // sum2 += vec_a * vec_a
+        sum3 = _mm256_fmadd_ps(vec_b, vec_b, sum3); // sum3 += vec_b * vec_b
+
+        i += 1;
+    }
+
+    // Horizontal add to sum up the elements in the vector
+    let dot_product = horizontal_add_avx(sum1);
+    let mag_a = horizontal_add_avx(sum2).sqrt();
+    let mag_b = horizontal_add_avx(sum3).sqrt();
+
+    1.0 - (dot_product / (mag_a * mag_b))
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx"))]
+#[inline(always)]
+unsafe fn horizontal_add_avx(vec: __m256) -> f32 {
+    let high = _mm256_extractf128_ps(vec, 1); // Extract high 128 bits
+    let low = _mm256_castps256_ps128(vec); // Low 128 bits are already in place
+    let sum128 = _mm_add_ps(low, high); // Add high and low parts
+    let high64 = _mm_movehl_ps(sum128, sum128); // Move high 64 bits to low
+    let sum64 = _mm_add_ps(sum128, high64); // Add these together
+    let high32 = _mm_shuffle_ps(sum64, sum64, 0x1); // Move high 32 bits to low
+    let sum32 = _mm_add_ss(sum64, high32); // Final addition
+    _mm_cvtss_f32(sum32) // Convert to scalar
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

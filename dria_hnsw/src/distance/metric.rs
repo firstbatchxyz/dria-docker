@@ -29,14 +29,6 @@ pub(crate) fn l2_similarity(arr_a: &[f32], arr_b: &[f32]) -> f32 {
 #[derive(Debug)]
 pub struct MetricL2 {}
 impl Metric<f32> for MetricL2 {
-    fn uses_preprocessor() -> bool {
-        return false;
-    }
-    #[allow(unused_variables)]
-    fn pre_process(arr_a: &[f32]) -> Option<Vec<f32>> {
-        None
-    }
-
     #[inline(always)]
     fn compare(arr_a: &[f32], arr_b: &[f32]) -> f32 {
         #[cfg(all(target_feature = "fma", target_feature = "avx",))]
@@ -57,14 +49,16 @@ impl Metric<f32> for MetricL2 {
         }
         l2_similarity(arr_a, arr_b)
     }
-}
-impl Metric<u8> for MetricL2 {
+    #[allow(unused_variables)]
+    fn pre_process(arr_a: &[f32]) -> Option<Vec<f32>> {
+        None
+    }
+
     fn uses_preprocessor() -> bool {
         return false;
     }
-    fn pre_process(_arr_a: &[u8]) -> Option<Vec<u8>> {
-        None
-    }
+}
+impl Metric<u8> for MetricL2 {
     fn compare(arr_a: &[u8], arr_b: &[u8]) -> f32 {
         let res: u32 = arr_a
             .iter()
@@ -73,6 +67,12 @@ impl Metric<u8> for MetricL2 {
             .map(|(a, b)| (a as u32 - b as u32) * (a as u32 - b as u32))
             .sum();
         res as f32
+    }
+    fn pre_process(_arr_a: &[u8]) -> Option<Vec<u8>> {
+        None
+    }
+    fn uses_preprocessor() -> bool {
+        return false;
     }
 }
 
@@ -88,13 +88,6 @@ pub(crate) fn l1_similarity(arr_a: &[f32], arr_b: &[f32]) -> f32 {
 #[derive(Debug)]
 pub struct MetricL1 {}
 impl Metric<f32> for MetricL1 {
-    fn uses_preprocessor() -> bool {
-        return false;
-    }
-    #[allow(unused_variables)]
-    fn pre_process(arr_a: &[f32]) -> Option<Vec<f32>> {
-        None
-    }
     #[inline(always)]
     #[allow(unused_variables)]
     fn compare(arr_a: &[f32], arr_b: &[f32]) -> f32 {
@@ -116,18 +109,18 @@ impl Metric<f32> for MetricL1 {
         }
         l1_similarity(arr_a, arr_b)
     }
+    #[allow(unused_variables)]
+    fn pre_process(arr_a: &[f32]) -> Option<Vec<f32>> {
+        None
+    }
+    fn uses_preprocessor() -> bool {
+        return false;
+    }
 }
 
 #[derive(Debug)]
 pub struct Hamming {}
 impl Metric<f32> for Hamming {
-    fn uses_preprocessor() -> bool {
-        return false;
-    }
-    #[allow(unused_variables)]
-    fn pre_process(arr_a: &[f32]) -> Option<Vec<f32>> {
-        None
-    }
     #[inline(always)]
     fn compare(arr_a: &[f32], arr_b: &[f32]) -> f32 {
         #[cfg(all(target_arch = "aarch64", target_feature = "neon",))]
@@ -138,6 +131,13 @@ impl Metric<f32> for Hamming {
         }
 
         hamming_similarity(arr_a, arr_b)
+    }
+    #[allow(unused_variables)]
+    fn pre_process(arr_a: &[f32]) -> Option<Vec<f32>> {
+        None
+    }
+    fn uses_preprocessor() -> bool {
+        return false;
     }
 }
 
@@ -157,20 +157,32 @@ pub(crate) fn hamming_similarity(arr_a: &[f32], arr_b: &[f32]) -> f32 {
 #[derive(Debug)]
 pub struct MetricCosine {}
 impl Metric<f32> for MetricCosine {
-    fn uses_preprocessor() -> bool {
-        return true;
-    }
-    #[allow(unused_variables)]
-    fn pre_process(arr_a: &[f32]) -> Option<Vec<f32>> {
-        cosine_pre_process(arr_a)
-    }
     #[inline(always)]
     fn compare(arr_a: &[f32], arr_b: &[f32]) -> f32 {
         #[cfg(all(target_arch = "wasm32", target_feature = "simd128",))]
         {
             return unsafe { metric_wasm::cosine_similarity_wasm(arr_a, arr_b) };
         }
+        #[cfg(all(target_arch = "aarch64", target_feature = "neon",))]
+        {
+            if std::arch::is_aarch64_feature_detected!("neon") {
+                return unsafe { metric_aarch::cosine_similarity_aarch(arr_a, arr_b) };
+            }
+        }
+        #[cfg(all(target_arch = "x86_64", target_feature = "fma", target_feature = "avx",))]
+        {
+            if is_x86_feature_detected!("avx") && is_x86_feature_detected!("fma") {
+                return unsafe { metric_avx::cosine_similarity_avx(arr_a, arr_b) };
+            }
+        }
         cosine_compare(arr_a, arr_b)
+    }
+    #[allow(unused_variables)]
+    fn pre_process(arr_a: &[f32]) -> Option<Vec<f32>> {
+        cosine_pre_process(arr_a)
+    }
+    fn uses_preprocessor() -> bool {
+        return true;
     }
 }
 
