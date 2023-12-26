@@ -89,14 +89,17 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
       for (let b = 0; b < staleResults.length; b += config.BUNDLR_FBS) {
         const batchResults = staleResults.slice(b, b + config.BUNDLR_FBS);
 
-        const msg = `\t[${b} of ${staleResults.length} values downloaded]`;
+        const msg = `\t[${b + config.BUNDLR_FBS} of ${staleResults.length} values downloaded]`;
         console.time(msg);
-        const batchValues: V[] = await Promise.all(
-          batchResults.map((result) => downloadFromBundlr<V>(result.sortKeyCacheResult.cachedValue as string))
+        const batchValues = await Promise.all(
+          batchResults.map((result) => downloadFromBundlr<{ data: V }>(result.sortKeyCacheResult.cachedValue as string))
         );
         console.timeEnd(msg);
 
-        await refreshRedis(batchResults, batchValues);
+        await refreshRedis(
+          batchResults,
+          batchValues.map((val) => val.data) // our Bundlr service uploads as "{data: payload}" so we parse it here
+        );
       }
       console.log("Downloaded & refreshed all stale values.");
     } else {

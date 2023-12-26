@@ -5,6 +5,9 @@ services:
   # depends on Micro API wait-for to complete
   dria-hnsw:
     build: ./dria_hnsw
+    environment:
+      - REDIS_URL=redis://default:redispw@redis:6379
+      - CONTRACT_ID=${CONTRACT}
     ports:
       - "8080:8080"
     depends_on:
