@@ -35,12 +35,13 @@ impl RedisClient {
     }
 
     pub fn set(&mut self, key:String, value:String)->Result<(), DeserializeError>{
-        let _: () = self.connection.set(&key, &value).map_err(|_| DeserializeError::RedisConnectionError)?;
+        let keys_local = format!("{}.value.{}", self.tag, key);
+        let _: () = self.connection.set(&keys_local, &value).map_err(|_| DeserializeError::RedisConnectionError)?;
         Ok(())
     }
 
     pub fn get_neighbor(&mut self, layer: usize, idx: usize)->Result<LayerNode,DeserializeError>{
-        let key = format!("{}:{}", layer.to_string(), idx.to_string());
+        let key = format!("{}.value.{}:{}", self.tag, layer.to_string(), idx.to_string());
 
         let node_str = match self.connection.get::<_, String>(key).map_err(|_| DeserializeError::RedisConnectionError) {
             Ok(node_str) => node_str,
@@ -55,7 +56,7 @@ impl RedisClient {
 
     pub fn get_neighbors(&mut self, layer: usize, indices: Vec<u32>)->Result<Vec<LayerNode>,DeserializeError>{
 
-        let keys = indices.iter().map(|x| format!("{}:{}", layer.to_string(), x.to_string())).collect::<Vec<String>>();
+        let keys = indices.iter().map(|x| format!("{}.value.{}:{}", self.tag, layer.to_string(), x.to_string())).collect::<Vec<String>>();
 
         let values_str: Vec<String> = self.connection.mget(keys).map_err(|_| DeserializeError::RedisConnectionError)?;
 
@@ -70,7 +71,7 @@ impl RedisClient {
     }
 
     pub fn upsert_neighbor(&mut self, node: LayerNode) -> Result<(), DeserializeError> {
-        let key = format!("{}:{}", node.level, node.idx);
+        let key = format!("{}.value.{}:{}", self.tag, node.level, node.idx);
 
         let node_str = node_to_base64(&node);
         self.set(key, node_str)?;
@@ -81,7 +82,7 @@ impl RedisClient {
     pub fn upsert_neighbors(&mut self, nodes: Vec<LayerNode>) -> Result<(), DeserializeError> {
         let mut pairs = Vec::new();
         for node in nodes {
-            let key = format!("{}:{}", node.level, node.idx);
+            let key = format!("{}.value.{}:{}", self.tag, node.level, node.idx);
             let node_str = node_to_base64(&node);
             pairs.push((key, node_str));
         }
@@ -92,7 +93,7 @@ impl RedisClient {
     }
 
     pub fn get_points(&mut self, indices: &Vec<u32>) -> Result<Vec<Point>, DeserializeError> {
-        let keys = indices.iter().map(|x| x.to_string()).collect::<Vec<String>>();
+        let keys = indices.iter().map(|x| format!("{}.value.{}", self.tag, x)).collect::<Vec<String>>();
 
         if keys.is_empty() {
             return Ok(vec![]);
@@ -114,7 +115,7 @@ impl RedisClient {
             let idx = start_idx + i;
             let p = Point::new(p.clone(), idx);
             let p_str = point_to_base64(&p);
-            pairs.push((idx.to_string(), p_str));
+            pairs.push((format!("{}.value.{}", self.tag, idx), p_str));
         }
 
         let _ = self.connection.mset(pairs.as_slice()).map_err(|_| DeserializeError::RedisConnectionError)?;
@@ -125,43 +126,43 @@ impl RedisClient {
         let p = Point::new(v, idx);
         let p_str = point_to_base64(&p);
 
-        self.set(idx.to_string(), p_str)?;
+        self.set(format!("{}.value.{}", self.tag, idx), p_str)?;
         Ok(())
     }
 
 
     pub fn set_datasize(&mut self, datasize: usize) -> Result<(), DeserializeError> {
-        let _: () = self.connection.set("datasize", datasize.to_string()).map_err(|_| DeserializeError::RedisConnectionError)?;
+        let _: () = self.connection.set(format!("{}.value.datasize", self.tag), datasize.to_string()).map_err(|_| DeserializeError::RedisConnectionError)?;
         Ok(())
     }
 
 
     pub fn get_datasize(&mut self) -> Result<usize, DeserializeError> {
-        let datasize: String = self.connection.get("datasize").map_err(|_| DeserializeError::RedisConnectionError)?;
+        let datasize: String = self.connection.get(format!("{}.value.datasize", self.tag)).map_err(|_| DeserializeError::RedisConnectionError)?;
         let datasize = datasize.parse::<usize>().unwrap();
         Ok(datasize)
     }
 
 
     pub fn set_num_layers(&mut self, num_layers: usize) -> Result<(), DeserializeError> {
-        let _: () = self.connection.set("num_layers", num_layers.to_string()).map_err(|_| DeserializeError::RedisConnectionError)?;
+        let _: () = self.connection.set(format!("{}.value.num_layers", self.tag), num_layers.to_string()).map_err(|_| DeserializeError::RedisConnectionError)?;
         Ok(())
     }
 
     pub fn get_num_layers(&mut self) -> Result<usize, DeserializeError> {
-        let num_layers: String = self.connection.get("num_layers").map_err(|_| DeserializeError::RedisConnectionError)?;
+        let num_layers: String = self.connection.get(format!("{}.value.num_layers", self.tag)).map_err(|_| DeserializeError::RedisConnectionError)?;
         let num_layers = num_layers.parse::<usize>().unwrap();
         Ok(num_layers)
     }
 
 
     pub fn set_ep(&mut self, ep: usize) -> Result<(), DeserializeError> {
-        let _: () = self.connection.set("ep", ep.to_string()).map_err(|_| DeserializeError::RedisConnectionError)?;
+        let _: () = self.connection.set(format!("{}.value.ep", self.tag), ep.to_string()).map_err(|_| DeserializeError::RedisConnectionError)?;
         Ok(())
     }
 
     pub fn get_ep(&mut self) -> Result<usize, DeserializeError> {
-        let ep: String = self.connection.get("ep").map_err(|_| DeserializeError::RedisConnectionError)?;
+        let ep: String = self.connection.get(format!("{}.value.ep", self.tag)).map_err(|_| DeserializeError::RedisConnectionError)?;
         let ep = ep.parse::<usize>().unwrap();
         Ok(ep)
     }
@@ -169,7 +170,7 @@ impl RedisClient {
     pub fn set_metadata_batch(&mut self, metadata: Vec<Value>, idx: usize) -> Result<(), DeserializeError> {
         let mut pairs = Vec::new();
         for (i, m) in metadata.iter().enumerate() {
-            let key = format!("m:{}", idx + i);
+            let key = format!("{}.value.m:{}", self.tag, idx + i);
             let metadata_str = serde_json::to_string(&m).unwrap();
             pairs.push((key, metadata_str));
         }
@@ -178,21 +179,21 @@ impl RedisClient {
     }
 
     pub fn set_metadata(&mut self, metadata: Value, idx: usize) -> Result<(), DeserializeError> {
-        let key = format!("m:{}", idx);
+        let key = format!("{}.value.m:{}", self.tag, idx);
         let metadata_str = serde_json::to_string(&metadata).unwrap();
         self.set(key, metadata_str)?;
         Ok(())
     }
 
     pub fn get_metadata(&mut self, idx: usize) -> Result<Value, DeserializeError> {
-        let key = format!("m:{}", idx);
+        let key = format!("{}.value.m:{}", self.tag, idx);
         let metadata_str: String = self.connection.get(&key).map_err(|_| DeserializeError::RedisConnectionError)?;
         let metadata: Value = serde_json::from_str(&metadata_str).unwrap();
         Ok(metadata)
     }
 
     pub fn get_metadatas(&mut self, indices: Vec<u32>) -> Result<Vec<Value>, DeserializeError> {
-        let keys = indices.iter().map(|x| format!("m:{}", x)).collect::<Vec<String>>();
+        let keys = indices.iter().map(|x| format!("{}.value.m:{}", self.tag, x)).collect::<Vec<String>>();
 
         let metadata_str: Vec<String> = self.connection.mget(&keys).map_err(|_| DeserializeError::RedisConnectionError)?;
 
