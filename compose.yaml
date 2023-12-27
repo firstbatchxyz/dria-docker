@@ -48,6 +48,12 @@ services:
     image: "redis:alpine"
     expose:
       - "6379"
-    volumes:
-      - "./redis.conf:/app/redis.conf:ro"
-    command: redis-server /app/redis.conf
+    # prettier-ignore
+    command: [
+      'redis-server', 
+      '--port', '6379',
+      '--maxmemory', '100mb',
+      '--maxmemory-policy', 'allkeys-lru',
+      '--appendonly', 'no',
+      '--save', '""'
+    ]
