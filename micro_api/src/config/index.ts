@@ -11,8 +11,6 @@ export default {
   USE_HTX: process.env.USE_HTX === "true",
   /** Log level for underlying Warp. */
   WARP_LOG_LEVEL: (process.env.WARP_LOG_LEVEL || "info") as Parameters<typeof LoggerFactory.INST.logLevel>[0],
-  /** Arweave port for `arlocal`. */
-  ARWEAVE_PORT: 3169,
   /** How many fetches at once should be made to download Bundlr data? FBS stands for "Fetch Batch Size". */
   BUNDLR_FBS: parseInt(process.env.BUNDLR_FBS || "40"),
   /** Base URL for Bundlr downloads. */

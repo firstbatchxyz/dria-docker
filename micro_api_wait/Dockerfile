@@ -1,3 +1,4 @@
+# Use the most-minimal image
 FROM alpine
 WORKDIR /app
 

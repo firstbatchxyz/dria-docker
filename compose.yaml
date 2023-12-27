@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  # Dria HNSW Rust code
+  ### Dria HNSW Rust code ###
   # depends on Micro API wait-for to complete
   dria-hnsw:
     build: ./dria_hnsw
@@ -14,7 +14,7 @@ services:
       micro-api-wait:
         condition: service_completed_successfully
 
-  # Micro API 'wait-for' script
+  ### Micro API 'wait-for' script ###
   # will complete when it makes sure Micro has refreshed everything
   # depends on Micro API to start
   micro-api-wait:
@@ -24,7 +24,7 @@ services:
     depends_on:
       - micro-api
 
-  # Micro API for HollowDB
+  ### Micro API for HollowDB ###
   # depends on Redis to start
   micro-api:
     build: ./micro_api
@@ -33,16 +33,17 @@ services:
     expose:
       - "3000" # used by Micro API wait-for script
     volumes:
-      - ${WALLET}:/app/config/wallet.json
+      - ${WALLET}:/app/config/wallet.json:ro
     environment:
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_TXID=${CONTRACT}
       - USE_BUNDLR=true # true if your contract uses Bundlr
       - USE_HTX=true # true if your contract stores values as `hash.txid`
+      - BUNDLR_FBS=80 # batch size for downloading bundled values from Arweave
     depends_on:
       - redis
 
-  # Redis Container
+  ### Redis Container ###
   redis:
     image: "redis:alpine"
     expose:

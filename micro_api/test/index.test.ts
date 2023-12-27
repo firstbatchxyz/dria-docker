@@ -23,6 +23,7 @@ describe("crud operations", () => {
   let redisClient: Redis;
   let url: string;
   let prover: Prover;
+  const ARWEAVE_PORT = 3169;
 
   const VALUE = BigInt(Math.floor(Math.random() * 9_999_999)).toString();
   const NEW_VALUE = BigInt(Math.floor(Math.random() * 9_999_999)).toString();
@@ -33,20 +34,20 @@ describe("crud operations", () => {
     console.log("Starting...");
 
     // create a local Arweave instance
-    arlocal = new ArLocal(config.ARWEAVE_PORT, false);
+    arlocal = new ArLocal(ARWEAVE_PORT, false);
     await arlocal.start();
 
     // deploy a contract locally and generate a wallet
     redisClient = new Redis(config.REDIS_URL, { lazyConnect: false });
     let caches = createCaches("testing-setup", redisClient);
-    let warp = makeLocalWarp(config.ARWEAVE_PORT, caches);
+    let warp = makeLocalWarp(ARWEAVE_PORT, caches);
     const owner: ArWallet = (await warp.generateWallet()).jwk;
     const { contractTxId } = await deploy(owner, warp);
 
     // start the server & connect to the contract
     prover = new Prover(__dirname + "/circuit/hollow-authz.wasm", __dirname + "/circuit/prover_key.zkey", "plonk");
     caches = createCaches(contractTxId, redisClient);
-    warp = makeLocalWarp(config.ARWEAVE_PORT, caches);
+    warp = makeLocalWarp(ARWEAVE_PORT, caches);
     const hollowdb = new SDK(owner, contractTxId, warp);
     const server = makeServer(hollowdb, contractTxId);
     service = new http.Server(serve(server));
