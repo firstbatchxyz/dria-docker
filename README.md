@@ -1,4 +1,6 @@
-# Dria Dockerized
+# Dria
+
+## Usage
 
 To get started:
 
@@ -11,10 +13,6 @@ Or, you can put these into an `.env` and do:
 ```sh
 source .env && docker compose up
 ```
-
-Or if you are really sure about your wallet and/or contract id, you can hardcode them within the Docker compose [file](./compose.yaml).
-
-## Containers
 
 When everything is up, you will have access to both Dria and HollowDB:
 

@@ -7,7 +7,7 @@ import { Redis } from "ioredis";
 
 import type { KeyedSortKeyCacheResult, Request } from "./types";
 import config from "./config";
-import { downloadFromBundlr } from "./util";
+import { downloadFromBundlr, progressString, tryParse } from "./util";
 
 /**
  * A higher-order function to create a micro server that uses the given HollowDB instance
@@ -18,6 +18,7 @@ import { downloadFromBundlr } from "./util";
  */
 export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: string) {
   let isReady = false;
+  let progress: [number, number] = [0, 0];
 
   const kv = hollowdb.base.warp.kvStorageFactory(contractTxId);
   const redis = kv.storage<Redis>();
@@ -26,17 +27,24 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
   const toValueKey = (key: string) => `${contractTxId}.value.${key}`;
   /** Maps a key to its `sortKey` key in Redis. */
   const toSortKeyKey = (key: string) => `${contractTxId}.sortKey.${key}`;
-  /** Given keys, sortKeys and values, `mset`s them to their respective keys. Can provide optional value overrides. */
+  /** Given keys, sortKeys and values, `mset`s them to their respective keys.
+   *
+   * Can provide optional value overrides, which is used in the case of Bundlr downloads where instead of writing
+   * the original value that is the txId, we write the downloaded data from Bundlr. */
   const refreshRedis = async (results: KeyedSortKeyCacheResult<V>[], values?: V[]) => {
     if (values && values.length !== results.length) {
       throw new Error("array length mismatch");
     }
 
     // store the `value`s itself within the cache for each `key`
-    const valuePairs = results.map(({ key, sortKeyCacheResult: { cachedValue } }, i) => [
-      toValueKey(key),
-      JSON.stringify(values ? values[i] : cachedValue),
-    ]);
+    const valuePairs = results.map(({ key, sortKeyCacheResult: { cachedValue } }, i) => {
+      const val = values
+        ? typeof values[i] === "string"
+          ? (values[i] as string)
+          : JSON.stringify(values[i])
+        : JSON.stringify(cachedValue);
+      return [toValueKey(key), val];
+    });
     await redis.mset(...valuePairs.flat());
 
     // store the `sortKey`s for later refreshes to see if a `value` is stale
@@ -86,10 +94,13 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
       // (see relevant issue here: https://github.com/firstbatchxyz/hollowdb-dockerized/issues/7)
       // so instead we do these fetches batch-by-batch
       console.log("Starting batched Bundlr downloads:");
+      progress[1] = staleResults.length;
       for (let b = 0; b < staleResults.length; b += config.BUNDLR_FBS) {
         const batchResults = staleResults.slice(b, b + config.BUNDLR_FBS);
 
-        const msg = `\t[${b + config.BUNDLR_FBS} of ${staleResults.length} values downloaded]`;
+        progress[0] = Math.min(b + config.BUNDLR_FBS, staleResults.length);
+
+        const msg = `\t${progressString(progress[0], progress[1])} values downloaded`;
         console.time(msg);
         const batchValues = await Promise.all(
           batchResults.map((result) => downloadFromBundlr<{ data: V }>(result.sortKeyCacheResult.cachedValue as string))
@@ -123,7 +134,14 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
 
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     if (!isReady) {
-      return send(res, StatusCodes.SERVICE_UNAVAILABLE, "Cache is still loading, try again shortly.");
+      return send(
+        res,
+        StatusCodes.SERVICE_UNAVAILABLE,
+        `Contract cache is still loading, please try again shortly: ${progressString(
+          progress[0],
+          progress[1]
+        )} values loaded.`
+      );
     }
 
     // parse the request, it is either a (GET) "/key" or (POST)
@@ -140,7 +158,6 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
           };
 
     const { route, data } = reqBody;
-    // console.log({ route, data });
     try {
       switch (route) {
         case "GET": {
@@ -149,7 +166,7 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
         }
         case "GET_RAW": {
           const rawValue = await redis.get(toValueKey(data.key));
-          const value = rawValue ? JSON.parse(rawValue) : null;
+          const value = tryParse<V>(rawValue);
           return send(res, StatusCodes.OK, { value });
         }
         case "GET_MANY": {
@@ -158,7 +175,7 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
         }
         case "GET_MANY_RAW": {
           const rawValues = await redis.mget(...data.keys.map((key) => toValueKey(key)));
-          const values = rawValues.map((rawValue) => (rawValue ? JSON.parse(rawValue) : null));
+          const values = rawValues.map((rawValue) => tryParse<V>(rawValue));
           return send(res, StatusCodes.OK, { values });
         }
         case "PUT": {
