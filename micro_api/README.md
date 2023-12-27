@@ -1,6 +1,6 @@
 # HollowDB Micro for Docker
 
-This backend implementation uses [Micro](https://github.com/vercel/micro) which is a very lightweight server for NodeJS by Vercel, tailored towards usage within a container & supports Unix Domain Socket. It supports almost all CRUD operations as exposed by HollowDB; however, it is tailored specifically towards performant GET operations.
+This backend implementation uses [Micro](https://github.com/vercel/micro), which is a very lightweight server for NodeJS by Vercel, tailored towards usage within a container & supports Unix Domain Socket. It supports almost all CRUD operations as exposed by HollowDB; however, it is tailored specifically towards performant GET operations.
 
 > [!TIP]
 >
@@ -10,7 +10,9 @@ This backend implementation uses [Micro](https://github.com/vercel/micro) which 
 > - Call `GET_MANY_RAW` to get values directly from Redis, without using HollowDB or syncing with Warp.
 > - Call `GET_RAW` to get a single key the same way.
 >
-> During a `REFRESH`, if the value is already refreshed for its latest `sortKey` then it is not refreshed again, gaining us performance. It is a good practice to call `REFRESH` every so often.
+> During a `REFRESH`, if the value is already refreshed for its latest `sortKey` then it is not refreshed again, gaining us performance. It is a good practice to call `REFRESH` every so often if your contract has often updates.
+>
+> On first launch, `REFRESH` is called automatically.
 
 ## Setup
 
@@ -82,12 +84,6 @@ Start the production server with:
 
 ```sh
 CONTRACT_TXID="contract-txid" yarn start
-```
-
-Alternatively, you can use a container that launches a Redis within & serves the Micro API:
-
-```sh
-CONTRACT_TXID="contract-txid" yarn container
 ```
 
 ## Endpoints
@@ -277,11 +273,7 @@ Clears the contents for given `keys` with respect to the values written by `REFR
 
 > [!TIP]
 >
-> If no `keys` are given (i.e. `keys = undefined`) then this will clear **all keys**.
-
-## Examples
-
-See an example usage under `examples` folder. Note that you need the server running for the examples to work.
+> If no `keys` are given to the `CLEAR` endpoint (i.e. `keys = undefined`) then this will clear **all keys**.
 
 ## Testing
 
@@ -296,13 +288,3 @@ To run tests, do:
 ```sh
 yarn test
 ```
-
-## Contracts
-
-Below are some contracts to be used as `CONTRACT_TXID` for this app.
-
-| Name                                                                                          | Key Count | v.1.3.2 |
-| --------------------------------------------------------------------------------------------- | --------- | ------- |
-| [Small](https://sonar.warp.cc/#/app/contract/_eVfQYDOLpd-0QX0yt7RV2CXE5D9U0otCz9BNBiJMYY)     | ~50       |
-| [Batchable](https://sonar.warp.cc/#/app/contract/fIEQpXdc_tAfMn6l_Sd5QnEaXK3-H3JfnNBHJCYBjis) | ~15       |
-| [Main](https://sonar.warp.cc/#/app/contract/8uEwJHPA76HBQoDeNDp2te4R_AqS3P4SAcCkwgAxVXM)      | ~3.2K     |

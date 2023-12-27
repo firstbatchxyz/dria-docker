@@ -24,8 +24,7 @@
     "predev": "yarn compile",
     "dev": "npx micro-dev ./build/src/index.js",
     "test": "npx mocha --bail",
-    "clean": "rm -rf ./build",
-    "container": "docker compose up"
+    "clean": "rm -rf ./build"
   },
   "devDependencies": {
     "@types/chai": "^4.3.5",

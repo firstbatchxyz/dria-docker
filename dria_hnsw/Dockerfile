@@ -1,5 +1,16 @@
-#TODO: This Dockerfile will result in VERY big images. Needs to be optimized.
-FROM rust:1.71
+FROM --platform=$BUILDPLATFORM rust:1.71
+
+# https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+# Offical rust image supports the following archs: 
+#   amd64 (AMD & Intel 64-bit)
+#   arm32v7 (ARMv7 32-bit)
+#   arm64v8 (ARMv8 64-bit)
+#   i386 (Intel 32-bit 8086)
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+RUN echo "Build platform:  $BUILDPLATFORM"
+RUN echo "Target platform: $TARGETPLATFORM"
+
 
 RUN apt-get update
 RUN apt-get install -y cmake
