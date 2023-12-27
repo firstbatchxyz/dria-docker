@@ -6,6 +6,13 @@ FROM --platform=$BUILDPLATFORM rust:1.71
 #   arm32v7 (ARMv7 32-bit)
 #   arm64v8 (ARMv8 64-bit)
 #   i386 (Intel 32-bit 8086)
+#
+# our builds will be for platforms:
+#   linux/amd64
+#   linux/arm64/v8
+#   linux/arm32/v7
+#   linux/i386
+#
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 RUN echo "Build platform:  $BUILDPLATFORM"
