@@ -33,7 +33,7 @@ pub async fn get_health_status2() -> HttpResponse {
 #[post("/dria/query")]
 pub async fn query(req:HttpRequest, payload: Json<QueryModel>) -> HttpResponse {
 
-    let mut ind = HNSW::new(16, 128, 0, "".to_string(), None);
+    let mut ind:HNSW;
     match env::var("CONTRACT_ID") {
         Ok(val) => {
             ind = HNSW::new(16, 128, ef_helper(payload.level), val, None);
@@ -63,7 +63,7 @@ pub async fn query(req:HttpRequest, payload: Json<QueryModel>) -> HttpResponse {
 #[post ("/dria/fetch")]
 pub async fn fetch(req:HttpRequest, payload:Json<FetchModel>) -> HttpResponse{
 
-    let mut ind = HNSW::new(16, 128, 0, "".to_string(), None);
+    let mut ind:HNSW;
     match env::var("CONTRACT_ID") {
         Ok(val) => {
             ind = HNSW::new(16, 128, 0, val, None);
@@ -102,7 +102,7 @@ pub async fn fetch(req:HttpRequest, payload:Json<FetchModel>) -> HttpResponse{
 pub async fn insert(req:HttpRequest, payload: Json<InsertModel>) -> HttpResponse {
 
 
-    let mut ind = HNSW::new(16, 128, 0, "".to_string(), None);
+    let mut ind:HNSW;
     match env::var("CONTRACT_ID") {
         Ok(val) => {
             ind = HNSW::new(16, 128, 20, val, None);
