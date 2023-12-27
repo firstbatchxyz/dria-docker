@@ -4,7 +4,9 @@ services:
   ### Dria HNSW Rust code ###
   # depends on Micro API wait-for to complete
   dria-hnsw:
-    build: ./dria_hnsw
+    # build: ./dria_hnsw
+    image: "firstbatch/dria-hnsw"
+    # platform: "linux/amd64"
     environment:
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_ID=${CONTRACT}
@@ -18,7 +20,8 @@ services:
   # will complete when it makes sure Micro has refreshed everything
   # depends on Micro API to start
   micro-api-wait:
-    build: ./micro_api_wait
+    # build: ./micro_api_wait
+    image: "firstbatch/dria-hollowdb-wait-for"
     environment:
       - TARGET=micro-api:3000
     depends_on:
@@ -27,7 +30,8 @@ services:
   ### Micro API for HollowDB ###
   # depends on Redis to start
   micro-api:
-    build: ./micro_api
+    # build: ./micro_api
+    image: "firstbatch/dria-hollowdb"
     ports:
       - "3000:3000"
     expose:

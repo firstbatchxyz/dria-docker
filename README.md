@@ -17,6 +17,12 @@ To use Dria Docker, you need:
 
 ## Usage
 
+First, download the Docker compose file:
+
+```sh
+curl -o compose.yaml -L https://raw.githubusercontent.com/firstbatchxyz/dria-docker/master/compose.yaml
+```
+
 You can start a Dria container with the following command, where the wallet & contract information is provided as environment variables:
 
 ```sh
