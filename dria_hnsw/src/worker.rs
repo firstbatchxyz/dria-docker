@@ -3,7 +3,7 @@ use actix_web::{post ,get, web, HttpResponse, HttpRequest, HttpMessage};
 use actix_web::web::Json;
 use crate::responses::responses::CustomResponse;
 use crate::hnsw::index::HNSW;
-use std::time::{Instant};
+use std::time::Instant;
 use serde_json::{json, Value};
 
 use serde::{Serialize, Deserialize};
@@ -20,19 +20,8 @@ pub async fn get_health_status() -> HttpResponse {
     HttpResponse::Ok().json(response)
 }
 
-#[get("/dria/health")]
-pub async fn get_health_status2() -> HttpResponse {
-    let response = CustomResponse {
-        success: true,
-        data: "hello world!".to_string(),
-        code: 200,
-    };
-    HttpResponse::Ok().json(response)
-}
-
 #[post("/dria/query")]
 pub async fn query(req:HttpRequest, payload: Json<QueryModel>) -> HttpResponse {
-
     let mut ind:HNSW;
     match env::var("CONTRACT_ID") {
         Ok(val) => {
@@ -60,9 +49,8 @@ pub async fn query(req:HttpRequest, payload: Json<QueryModel>) -> HttpResponse {
 
 }
 
-#[post ("/dria/fetch")]
+#[post("/dria/fetch")]
 pub async fn fetch(req:HttpRequest, payload:Json<FetchModel>) -> HttpResponse{
-
     let mut ind:HNSW;
     match env::var("CONTRACT_ID") {
         Ok(val) => {
@@ -100,8 +88,6 @@ pub async fn fetch(req:HttpRequest, payload:Json<FetchModel>) -> HttpResponse{
 
 #[post("/dria/insert")]
 pub async fn insert(req:HttpRequest, payload: Json<InsertModel>) -> HttpResponse {
-
-
     let mut ind:HNSW;
     match env::var("CONTRACT_ID") {
         Ok(val) => {
