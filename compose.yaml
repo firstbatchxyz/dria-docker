@@ -6,7 +6,6 @@ services:
   dria-hnsw:
     # build: ./dria_hnsw
     image: "firstbatch/dria-hnsw"
-    # platform: "linux/amd64"
     environment:
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_ID=${CONTRACT}

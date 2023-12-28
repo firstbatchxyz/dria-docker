@@ -2,17 +2,29 @@
 
 This backend implementation uses [Micro](https://github.com/vercel/micro), which is a very lightweight server for NodeJS by Vercel, tailored towards usage within a container & supports Unix Domain Socket. It supports almost all CRUD operations as exposed by HollowDB; however, it is tailored specifically towards performant GET operations.
 
-> [!TIP]
->
-> In particular, you will have the most performant multiple-GET requests in the following way:
->
-> - Call `REFRESH` to populate Redis with the latest key values. The logic here is similar to [`getStorageValues`](https://github.com/warp-contracts/warp/blob/main/src/contract/HandlerBasedContract.ts#L930) function within Warp.
-> - Call `GET_MANY_RAW` to get values directly from Redis, without using HollowDB or syncing with Warp.
-> - Call `GET_RAW` to get a single key the same way.
->
-> During a `REFRESH`, if the value is already refreshed for its latest `sortKey` then it is not refreshed again, gaining us performance. It is a good practice to call `REFRESH` every so often if your contract has often updates.
+In particular, you will have the most performant multiple-GET requests in the following way:
+
+- Call `REFRESH` to populate Redis with the latest key values. The logic here is similar to [`getStorageValues`](https://github.com/warp-contracts/warp/blob/main/src/contract/HandlerBasedContract.ts#L930) function within Warp.
+- Call `GET_MANY_RAW` to get values directly from Redis, without using HollowDB or syncing with Warp.
+- Call `GET_RAW` to get a single key the same way.
+
+During a `REFRESH`, if the value is already refreshed for its latest `sortKey` then it is not refreshed again, making this whole process a bit more efficient if refresh is called multiple times. It is also a good practice to call `REFRESH` every so often if your contract has often updates.
+
+> [!ALERT]
 >
 > On first launch, `REFRESH` is called automatically.
+
+To see the available endpoints, refer to [this section](#endpoints) below.
+
+## Container
+
+You can pull a container of HollowDB Micro API from Docker Hub:
+
+```sh
+docker pull firstbatch/dria-hollowdb
+```
+
+However, you will need a Redis container running at the URL defined by `REDIS_URL` environment variable.
 
 ## Setup
 
