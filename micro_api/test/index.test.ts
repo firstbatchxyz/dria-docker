@@ -13,7 +13,7 @@ import { Prover, computeKey } from "hollowdb-prover";
 import makeServer from "../src/server";
 import config from "../src/config";
 import { createCaches } from "../src/cache";
-import { makeLocalWarp } from "../src/util";
+import { makeLocalWarp } from "./util";
 
 import { deploy, postData, getKey, sleep, shutdown, randomKeyValue } from "./util";
 

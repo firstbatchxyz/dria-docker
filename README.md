@@ -23,10 +23,10 @@ Download the Docker compose file:
 curl -o compose.yaml -L https://raw.githubusercontent.com/firstbatchxyz/dria-docker/master/compose.yaml
 ```
 
-You can start a Dria container with the following command, where the wallet & contract information is provided as environment variables:
+You can start a Dria container with the following command, where the wallet & contract information is provided as environment variables. Note that the wallet path must start with either relative path `./` or absolute path `/.`.
 
 ```sh
-WALLET=path/to/wallet.json CONTRACT=contract-txid docker compose up
+WALLET=./path/to/wallet.json CONTRACT=contract-txid docker compose up
 ```
 
 When everything is up, you will have access to both Dria and HollowDB on your local network!

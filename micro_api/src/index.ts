@@ -2,7 +2,7 @@
 import "dotenv/config";
 
 import { Redis } from "ioredis";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { SDK } from "hollowdb";
 import type { JWKInterface } from "warp-contracts";
 
@@ -16,12 +16,15 @@ if (!contractTxId) {
   throw new Error("Please provide CONTRACT_TXID environment variable.");
 }
 if (Buffer.from(contractTxId, "base64").toString("hex").length !== 64) {
-  throw new Error("Invalid CONTRACT_TXID,");
+  throw new Error("Invalid CONTRACT_TXID.");
 }
 const redisClient = new Redis(config.REDIS_URL, {
   lazyConnect: false, // explicitly connect
 });
 const caches = createCaches(contractTxId, redisClient);
+if (!existsSync(config.WALLET_PATH)) {
+  throw new Error("No wallet found at: " + config.WALLET_PATH);
+}
 const wallet = JSON.parse(readFileSync(config.WALLET_PATH, "utf-8")) as JWKInterface;
 const warp = makeWarp(caches);
 
