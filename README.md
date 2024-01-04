@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="./logo.svg" alt="logo" width="142">
+</p>
+
+<p align="center">
   <h1 align="center">
     Dria Docker
   </h1>
@@ -23,7 +27,7 @@ Download the Docker compose file:
 curl -o compose.yaml -L https://raw.githubusercontent.com/firstbatchxyz/dria-docker/master/compose.yaml
 ```
 
-You can start a Dria container with the following command, where the wallet & contract information is provided as environment variables. Note that the wallet path must start with either relative path `./` or absolute path `/.`.
+You can start a Dria container with the following command, where the wallet & contract information is provided as environment variables. Note that the wallet path must start with either relative path `./` or absolute path `/`.
 
 ```sh
 WALLET=./path/to/wallet.json CONTRACT=contract-txid docker compose up
