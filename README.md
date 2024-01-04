@@ -17,7 +17,7 @@ To use Dria Docker, you need:
 
 - [Docker](https://www.docker.com/) installed in your machine.
 - An [Arweave wallet](https://arweave.app/welcome) in your machine, which you will provide via its path.
-- A Dria contract deployed on Arweave to connect to, which you will provide via its transaction ID. The contract ID can be seen on each knowledge deployed to [Dria](https://dria.co/), you can simply use that ID here.!
+- A Dria contract deployed on Arweave to connect to, which you will provide via its transaction ID. The contract ID can be seen on each knowledge deployed to [Dria](https://dria.co/), you can simply use that ID here!
 
 ## Usage
 

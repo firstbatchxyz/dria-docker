@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
-use dria_hnsw::worker::{fetch, get_health_status, get_health_status2, insert, query};
+use dria_hnsw::worker::{fetch, get_health_status, insert, query};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 //use lambda_web::{run_actix_on_lambda};
@@ -9,7 +9,6 @@ use tokio::sync::Mutex;
 
 pub fn config(conf: &mut web::ServiceConfig) {
     conf.service(get_health_status);
-    conf.service(get_health_status2);
     conf.service(query);
     conf.service(insert);
     conf.service(fetch);
