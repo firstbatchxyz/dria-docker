@@ -3,6 +3,7 @@ import http from "http";
 export * from "./deploy";
 export * from "./fetch";
 export * from "./random";
+export * from "./warp";
 
 /**
  * Sleeps the system for a given number of milliseconds.
