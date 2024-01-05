@@ -1,9 +1,11 @@
 // load env variables (put this at top)
 import "dotenv/config";
 
+import http from "http";
 import { Redis } from "ioredis";
 import { existsSync, readFileSync } from "fs";
 import { SDK } from "hollowdb";
+import { serve } from "micro";
 import type { JWKInterface } from "warp-contracts";
 
 import makeServer from "./server";
@@ -30,5 +32,6 @@ const warp = makeWarp(caches);
 
 const hollowdb = new SDK(wallet, contractTxId, warp);
 
-// module.exports needed by Micro
-module.exports = makeServer(hollowdb, contractTxId);
+const server = new http.Server(serve(makeServer(hollowdb, contractTxId)));
+
+server.listen(3000);

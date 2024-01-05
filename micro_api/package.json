@@ -17,12 +17,11 @@
   },
   "main": "build/src/index.js",
   "scripts": {
-    "precompile": "yarn clean",
-    "compile": "npx tsc",
-    "prestart": "yarn compile",
-    "start": "npx micro ./build/src/index.js",
-    "predev": "yarn compile",
-    "dev": "npx micro-dev ./build/src/index.js",
+    "prebuild": "yarn clean",
+    "build": "npx tsc",
+    "prestart": "yarn build",
+    "start": "node ./build/src/index.js",
+    "predev": "yarn build",
     "test": "npx mocha --bail",
     "clean": "rm -rf ./build"
   },
