@@ -1,17 +1,28 @@
 # Using Node 20
-FROM node:20
+FROM node:20 as base
 WORKDIR /app
 
-# Install dependencies
-COPY package.json /app 
-COPY yarn.lock /app
-COPY tsconfig.json /app 
-COPY src /app/src
-RUN yarn install 
+COPY . .
 
-# Compile & build
-RUN yarn compile
+RUN yarn set version berry
+RUN yarn install
 
-# Run Micro
-CMD ["npx", "micro", "./build/index.js"]
+# Build code
+FROM base as builder
+WORKDIR /app
+RUN yarn build
+
+# Install prod dependencies
+FROM base as dependencies
+WORKDIR /app
+RUN yarn workspaces focus --production
+
+FROM gcr.io/distroless/nodejs20-debian11
+WORKDIR /app
+COPY --from=builder /app/build ./build
+COPY --from=dependencies /app/node_modules ./node_modules
+
 EXPOSE 3000
+
+CMD ["./build/index.js"]
+
