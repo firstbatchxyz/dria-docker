@@ -1,3 +1,6 @@
+use super::simple::*;
+use log::{info, trace, warn};
+
 #[cfg(all(target_arch = "aarch64", target_feature = "neon",))]
 use crate::distance::metric_aarch;
 
@@ -40,7 +43,7 @@ impl Metric<f32> for MetricL2 {
         #[cfg(all(target_arch = "aarch64", target_feature = "neon",))]
         {
             if std::arch::is_aarch64_feature_detected!("neon") {
-                return unsafe { metric_aarch::l2_similarity_aarch(arr_a, arr_b) };
+                return unsafe { metric_aarch::euclid_similarity_neon(arr_a, arr_b) };
             }
         }
         #[cfg(all(target_arch = "wasm32", target_feature = "simd128",))]
@@ -100,7 +103,7 @@ impl Metric<f32> for MetricL1 {
         #[cfg(all(target_arch = "aarch64", target_feature = "neon",))]
         {
             if std::arch::is_aarch64_feature_detected!("neon") {
-                return unsafe { metric_aarch::l1_similarity_aarch(arr_a, arr_b) };
+                return unsafe { metric_aarch::manhattan_similarity_neon(arr_a, arr_b) };
             }
         }
         #[cfg(all(target_arch = "wasm32", target_feature = "simd128",))]
@@ -119,42 +122,6 @@ impl Metric<f32> for MetricL1 {
 }
 
 #[derive(Debug)]
-pub struct Hamming {}
-impl Metric<f32> for Hamming {
-    #[inline(always)]
-    fn compare(arr_a: &[f32], arr_b: &[f32]) -> f32 {
-        #[cfg(all(target_arch = "aarch64", target_feature = "neon",))]
-        {
-            if std::arch::is_aarch64_feature_detected!("neon") {
-                return unsafe { metric_aarch::hamming_similarity_aarch(arr_a, arr_b) };
-            }
-        }
-
-        hamming_similarity(arr_a, arr_b)
-    }
-    #[allow(unused_variables)]
-    fn pre_process(arr_a: &[f32]) -> Option<Vec<f32>> {
-        None
-    }
-    fn uses_preprocessor() -> bool {
-        return false;
-    }
-}
-
-pub(crate) fn hamming_similarity(arr_a: &[f32], arr_b: &[f32]) -> f32 {
-    // TODO(infrawhispers) - we use the raw bitwise representations to do hamming
-    // the client needs to be aware of this when creating the vectors and
-    // sending them out to the caller
-    let res: u32 = arr_a
-        .iter()
-        .cloned()
-        .zip(arr_b.iter().cloned())
-        .map(|(a, b)| (a.to_bits() ^ b.to_bits()).count_ones())
-        .sum();
-    res as f32
-}
-
-#[derive(Debug)]
 pub struct MetricCosine {}
 impl Metric<f32> for MetricCosine {
     #[inline(always)]
@@ -166,16 +133,27 @@ impl Metric<f32> for MetricCosine {
         #[cfg(all(target_arch = "aarch64", target_feature = "neon",))]
         {
             if std::arch::is_aarch64_feature_detected!("neon") {
-                return unsafe { metric_aarch::cosine_similarity_aarch(arr_a, arr_b) };
+                let a1 = unsafe { metric_aarch::cosine_preprocess_neon(arr_a) };
+                let a2 = unsafe { metric_aarch::cosine_preprocess_neon(arr_b) };
+                return unsafe { metric_aarch::dot_similarity_neon(a1.as_slice(), a2.as_slice()) };
             }
         }
         #[cfg(all(target_arch = "x86_64", target_feature = "fma", target_feature = "avx",))]
         {
             if is_x86_feature_detected!("avx") && is_x86_feature_detected!("fma") {
-                return unsafe { metric_avx::cosine_similarity_avx(arr_a, arr_b) };
+                let a1 = unsafe { metric_avx::cosine_preprocess_neon(arr_a) };
+                let a2 = unsafe { metric_aarch::cosine_preprocess_neon(arr_b) };
+                return unsafe { metric_aarch::dot_similarity_neon(a1.as_slice(), a2.as_slice()) };
             }
         }
-        cosine_compare(arr_a, arr_b)
+
+        let a1 = cosine_pre_process(arr_a);
+        let b1 = cosine_pre_process(arr_b);
+        if a1.is_none() || b1.is_none() {
+            warn!("Received None while normalizing non unit vec");
+            return 0.0;
+        }
+        dot_similarity(arr_a, arr_b)
     }
     #[allow(unused_variables)]
     fn pre_process(arr_a: &[f32]) -> Option<Vec<f32>> {

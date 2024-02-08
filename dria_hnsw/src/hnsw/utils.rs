@@ -1,7 +1,6 @@
-use std::collections::{BinaryHeap}; //node_metadata
 use std::cmp::{Ordering, Reverse};
+use std::collections::BinaryHeap; //node_metadata
 use std::collections::HashMap;
-
 
 #[derive(PartialEq, Debug)]
 pub struct Numeric(pub f32);
@@ -26,17 +25,13 @@ pub trait IntoMap<Numeric> {
 
 impl IntoMap<Numeric> for BinaryHeap<(Numeric, u32)> {
     fn into_map(self) -> HashMap<u32, f32> {
-        self.into_iter()
-            .map(|(d, i)| (i, d.0))
-            .collect()
+        self.into_iter().map(|(d, i)| (i, d.0)).collect()
     }
 }
 
 impl IntoMap<Numeric> for BinaryHeap<Reverse<(Numeric, u32)>> {
     fn into_map(self) -> HashMap<u32, f32> {
-        self.into_iter()
-            .map(|Reverse((d, i))| (i, d.0))
-            .collect()
+        self.into_iter().map(|Reverse((d, i))| (i, d.0)).collect()
     }
 }
 
@@ -46,14 +41,11 @@ pub trait IntoHeap<Numeric> {
 }
 
 impl IntoHeap<Numeric> for HashMap<u32, f32> {
-
     fn into_maxheap(self) -> BinaryHeap<(Numeric, u32)> {
-        self.into_iter()
-            .map(|(i, d)| (Numeric(d), i))
-            .collect()
+        self.into_iter().map(|(i, d)| (Numeric(d), i)).collect()
     }
 
-    fn into_minheap(self) -> BinaryHeap<Reverse<(Numeric, u32)>>{
+    fn into_minheap(self) -> BinaryHeap<Reverse<(Numeric, u32)>> {
         self.into_iter()
             .map(|(i, d)| Reverse((Numeric(d), i)))
             .collect()
@@ -62,28 +54,22 @@ impl IntoHeap<Numeric> for HashMap<u32, f32> {
 
 impl IntoHeap<Numeric> for Vec<(f32, u32)> {
     fn into_maxheap(self) -> BinaryHeap<(Numeric, u32)> {
-        self.into_iter()
-            .map(|(d, i)| (Numeric(d), i))
-            .collect()
+        self.into_iter().map(|(d, i)| (Numeric(d), i)).collect()
     }
 
-    fn into_minheap(self) -> BinaryHeap<Reverse<(Numeric, u32)>>{
+    fn into_minheap(self) -> BinaryHeap<Reverse<(Numeric, u32)>> {
         self.into_iter()
             .map(|(d, i)| Reverse((Numeric(d), i)))
             .collect()
     }
 }
 
-
-
-pub fn create_min_heap()-> BinaryHeap<Reverse<(Numeric, u32)>>{
+pub fn create_min_heap() -> BinaryHeap<Reverse<(Numeric, u32)>> {
     let mut q: BinaryHeap<Reverse<(Numeric, u32)>> = BinaryHeap::new();
     q
 }
 
-pub fn create_max_heap()-> BinaryHeap<(Numeric, u32)>{
+pub fn create_max_heap() -> BinaryHeap<(Numeric, u32)> {
     let mut q: BinaryHeap<(Numeric, u32)> = BinaryHeap::new();
     q
 }
-
-

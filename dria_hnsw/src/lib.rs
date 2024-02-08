@@ -1,8 +1,9 @@
-pub mod hnsw;
-pub mod proto;
+pub mod db;
 pub mod distance;
 pub mod errors;
-pub mod db;
+pub mod hnsw;
+pub mod middlewares;
 pub mod models;
-pub mod worker;
+pub mod proto;
 pub mod responses;
+pub mod worker;

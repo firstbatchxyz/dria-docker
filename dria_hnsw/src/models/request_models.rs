@@ -1,25 +1,23 @@
-use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
-use serde_json::Value;
 use core::fmt;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct InsertModel{
+pub struct InsertModel {
     pub vector: Vec<f32>,
-    pub metadata: Option<Value>
+    pub metadata: Option<Value>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct InsertBatchModel{
-    pub data: String
+pub struct InsertBatchModel {
+    pub data: String,
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct FetchModel{
-    pub id: Vec<u32>
+pub struct FetchModel {
+    pub id: Vec<u32>,
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct QueryModel {
@@ -29,7 +27,12 @@ pub struct QueryModel {
 }
 
 impl QueryModel {
-    pub fn new(vector: Vec<f32>, top_n: usize, contract_id: String, level: Option<usize>) -> Result<Self, ValidationError> {
+    pub fn new(
+        vector: Vec<f32>,
+        top_n: usize,
+        contract_id: String,
+        level: Option<usize>,
+    ) -> Result<Self, ValidationError> {
         Self::validate_top_n(top_n)?;
         Self::validate_level(level)?;
 
@@ -49,17 +52,16 @@ impl QueryModel {
     }
 
     fn validate_level(level: Option<usize>) -> Result<(), ValidationError> {
-
-        if level.is_some(){
+        if level.is_some() {
             match level.unwrap() {
                 1 | 2 | 3 | 4 => Ok(()),
-                _ => Err(ValidationError("Level should be 1, 2, 3, or 4.".to_string())),
+                _ => Err(ValidationError(
+                    "Level should be 1, 2, 3, or 4.".to_string(),
+                )),
             }
-        }
-        else{
+        } else {
             Ok(())
         }
-
     }
 }
 

@@ -1,129 +1,238 @@
-//use core::arch::x86_64::*;
+#[cfg(target_feature = "avx")]
+use std::arch::x86_64::*;
 
-#[cfg(all(target_feature = "fma", target_feature = "avx",))]
-#[inline(always)]
-unsafe fn _mm256_reduce_add_ps(x: __m256) -> f32 {
-    // this is fine since AVX is a superset of SSE - meaning we are guaranted
-    // to have the SSE instructions available to us
+#[cfg(target_feature = "avx")]
+#[target_feature(enable = "avx")]
+#[target_feature(enable = "fma")]
+unsafe fn hsum256_ps_avx(x: __m256) -> f32 {
     let x128: __m128 = _mm_add_ps(_mm256_extractf128_ps(x, 1), _mm256_castps256_ps128(x));
     let x64: __m128 = _mm_add_ps(x128, _mm_movehl_ps(x128, x128));
     let x32: __m128 = _mm_add_ss(x64, _mm_shuffle_ps(x64, x64, 0x55));
     _mm_cvtss_f32(x32)
 }
 
-#[cfg(all(target_feature = "fma", target_feature = "avx",))]
-#[inline(always)]
-pub(crate) unsafe fn l2_similarity_avx(arr_a: &[f32], arr_b: &[f32]) -> f32 {
-    let result;
-    let niters = (arr_a.len() / 8) as isize;
-    let mut sum = _mm256_setzero_ps();
-    let ptr_a = arr_a.as_ptr() as *mut i8;
-    let ptr_a_f = arr_a.as_ptr();
-    let ptr_b = arr_b.as_ptr() as *mut i8;
-    let ptr_b_f = arr_b.as_ptr();
-
-    for j in 0..niters {
-        if j < (niters - 1) {
-            _mm_prefetch(ptr_a.offset(8 * (j + 1)), _MM_HINT_T0);
-            _mm_prefetch(ptr_b.offset(8 * (j + 1)), _MM_HINT_T0);
-        }
-        let a_vec: __m256 = _mm256_load_ps(ptr_a_f.offset(8 * j) as *mut f32);
-        let b_vec: __m256 = _mm256_load_ps(ptr_b_f.offset(8 * j) as *mut f32);
-        let tmp_vec: __m256 = _mm256_sub_ps(a_vec, b_vec);
-        sum = _mm256_fmadd_ps(tmp_vec, tmp_vec, sum);
-    }
-    result = self::_mm256_reduce_add_ps(sum);
-    result
-}
-
-#[cfg(all(target_feature = "fma", target_feature = "avx",))]
-#[inline(always)]
-pub(crate) unsafe fn l1_similarity_avx(arr_a: &[f32], arr_b: &[f32]) -> f32 {
-    let result;
-    let niters = (arr_a.len() / 8) as isize;
-    let mut sum = _mm256_setzero_ps();
-    let ptr_a = arr_a.as_ptr() as *mut i8;
-    let ptr_a_f = arr_a.as_ptr();
-    let ptr_b = arr_b.as_ptr() as *mut i8;
-    let ptr_b_f = arr_b.as_ptr();
-
-    for j in 0..niters {
-        if j < (niters - 1) {
-            _mm_prefetch(ptr_a.offset(8 * (j + 1)), _MM_HINT_T0);
-            _mm_prefetch(ptr_b.offset(8 * (j + 1)), _MM_HINT_T0);
-        }
-        let a_vec: __m256 = _mm256_load_ps(ptr_a_f.offset(8 * j) as *mut f32);
-        let b_vec: __m256 = _mm256_load_ps(ptr_b_f.offset(8 * j) as *mut f32);
-        let tmp_vec: __m256 = _mm256_sub_ps(a_vec, b_vec);
-        sum = _mm256_add_ps(tmp_vec, sum);
-    }
-    result = self::_mm256_reduce_add_ps(sum);
-    result
-}
-
-#[cfg(all(target_arch = "x86_64", target_feature = "avx"))]
-#[inline(always)]
-pub (crate) unsafe fn cosine_similarity_avx(arr_a: &[f32], arr_b: &[f32]) -> f32 {
-    let n = arr_a.len();
-    let m = n / 8; // Process 8 elements at a time with AVX
-    let mut sum1 = _mm256_setzero_ps(); // Accumulator 1 for dot product
-    let mut sum2 = _mm256_setzero_ps(); // Accumulator 2 for magnitude of arr_a
-    let mut sum3 = _mm256_setzero_ps(); // Accumulator 3 for magnitude of arr_b
-
-    let mut i = 0;
+#[cfg(target_feature = "avx")]
+#[target_feature(enable = "avx")]
+#[target_feature(enable = "fma")]
+pub(crate) unsafe fn euclid_similarity_avx(v1: &[f32], v2: &[f32]) -> f32 {
+    let n = v1.len();
+    let m = n - (n % 32);
+    let mut ptr1: *const f32 = v1.as_ptr();
+    let mut ptr2: *const f32 = v2.as_ptr();
+    let mut sum256_1: __m256 = _mm256_setzero_ps();
+    let mut sum256_2: __m256 = _mm256_setzero_ps();
+    let mut sum256_3: __m256 = _mm256_setzero_ps();
+    let mut sum256_4: __m256 = _mm256_setzero_ps();
+    let mut i: usize = 0;
     while i < m {
-        let vec_a = _mm256_loadu_ps(arr_a.as_ptr().add(i * 8));
-        let vec_b = _mm256_loadu_ps(arr_b.as_ptr().add(i * 8));
+        let sub256_1: __m256 =
+            _mm256_sub_ps(_mm256_loadu_ps(ptr1.add(0)), _mm256_loadu_ps(ptr2.add(0)));
+        sum256_1 = _mm256_fmadd_ps(sub256_1, sub256_1, sum256_1);
 
-        sum1 = _mm256_fmadd_ps(vec_a, vec_b, sum1); // sum1 += vec_a * vec_b
+        let sub256_2: __m256 =
+            _mm256_sub_ps(_mm256_loadu_ps(ptr1.add(8)), _mm256_loadu_ps(ptr2.add(8)));
+        sum256_2 = _mm256_fmadd_ps(sub256_2, sub256_2, sum256_2);
 
-        sum2 = _mm256_fmadd_ps(vec_a, vec_a, sum2); // sum2 += vec_a * vec_a
-        sum3 = _mm256_fmadd_ps(vec_b, vec_b, sum3); // sum3 += vec_b * vec_b
+        let sub256_3: __m256 =
+            _mm256_sub_ps(_mm256_loadu_ps(ptr1.add(16)), _mm256_loadu_ps(ptr2.add(16)));
+        sum256_3 = _mm256_fmadd_ps(sub256_3, sub256_3, sum256_3);
 
-        i += 1;
+        let sub256_4: __m256 =
+            _mm256_sub_ps(_mm256_loadu_ps(ptr1.add(24)), _mm256_loadu_ps(ptr2.add(24)));
+        sum256_4 = _mm256_fmadd_ps(sub256_4, sub256_4, sum256_4);
+
+        ptr1 = ptr1.add(32);
+        ptr2 = ptr2.add(32);
+        i += 32;
     }
 
-    // Horizontal add to sum up the elements in the vector
-    let dot_product = horizontal_add_avx(sum1);
-    let mag_a = horizontal_add_avx(sum2).sqrt();
-    let mag_b = horizontal_add_avx(sum3).sqrt();
-
-    1.0 - (dot_product / (mag_a * mag_b))
+    let mut result = hsum256_ps_avx(sum256_1)
+        + hsum256_ps_avx(sum256_2)
+        + hsum256_ps_avx(sum256_3)
+        + hsum256_ps_avx(sum256_4);
+    for i in 0..n - m {
+        result += (*ptr1.add(i) - *ptr2.add(i)).powi(2);
+    }
+    -result
 }
 
-#[cfg(all(target_arch = "x86_64", target_feature = "avx"))]
-#[inline(always)]
-unsafe fn horizontal_add_avx(vec: __m256) -> f32 {
-    let high = _mm256_extractf128_ps(vec, 1); // Extract high 128 bits
-    let low = _mm256_castps256_ps128(vec); // Low 128 bits are already in place
-    let sum128 = _mm_add_ps(low, high); // Add high and low parts
-    let high64 = _mm_movehl_ps(sum128, sum128); // Move high 64 bits to low
-    let sum64 = _mm_add_ps(sum128, high64); // Add these together
-    let high32 = _mm_shuffle_ps(sum64, sum64, 0x1); // Move high 32 bits to low
-    let sum32 = _mm_add_ss(sum64, high32); // Final addition
-    _mm_cvtss_f32(sum32) // Convert to scalar
+#[cfg(target_feature = "avx")]
+#[target_feature(enable = "avx")]
+#[target_feature(enable = "fma")]
+pub(crate) unsafe fn manhattan_similarity_avx(v1: &[f32], v2: &[f32]) -> f32 {
+    let mask: __m256 = _mm256_set1_ps(-0.0f32); // 1 << 31 used to clear sign bit to mimic abs
+
+    let n = v1.len();
+    let m = n - (n % 32);
+    let mut ptr1: *const f32 = v1.as_ptr();
+    let mut ptr2: *const f32 = v2.as_ptr();
+    let mut sum256_1: __m256 = _mm256_setzero_ps();
+    let mut sum256_2: __m256 = _mm256_setzero_ps();
+    let mut sum256_3: __m256 = _mm256_setzero_ps();
+    let mut sum256_4: __m256 = _mm256_setzero_ps();
+    let mut i: usize = 0;
+    while i < m {
+        let sub256_1: __m256 = _mm256_sub_ps(_mm256_loadu_ps(ptr1), _mm256_loadu_ps(ptr2));
+        sum256_1 = _mm256_add_ps(_mm256_andnot_ps(mask, sub256_1), sum256_1);
+
+        let sub256_2: __m256 =
+            _mm256_sub_ps(_mm256_loadu_ps(ptr1.add(8)), _mm256_loadu_ps(ptr2.add(8)));
+        sum256_2 = _mm256_add_ps(_mm256_andnot_ps(mask, sub256_2), sum256_2);
+
+        let sub256_3: __m256 =
+            _mm256_sub_ps(_mm256_loadu_ps(ptr1.add(16)), _mm256_loadu_ps(ptr2.add(16)));
+        sum256_3 = _mm256_add_ps(_mm256_andnot_ps(mask, sub256_3), sum256_3);
+
+        let sub256_4: __m256 =
+            _mm256_sub_ps(_mm256_loadu_ps(ptr1.add(24)), _mm256_loadu_ps(ptr2.add(24)));
+        sum256_4 = _mm256_add_ps(_mm256_andnot_ps(mask, sub256_4), sum256_4);
+
+        ptr1 = ptr1.add(32);
+        ptr2 = ptr2.add(32);
+        i += 32;
+    }
+
+    let mut result = hsum256_ps_avx(sum256_1)
+        + hsum256_ps_avx(sum256_2)
+        + hsum256_ps_avx(sum256_3)
+        + hsum256_ps_avx(sum256_4);
+    for i in 0..n - m {
+        result += (*ptr1.add(i) - *ptr2.add(i)).abs();
+    }
+    -result
+}
+
+#[cfg(target_feature = "avx")]
+#[target_feature(enable = "avx")]
+#[target_feature(enable = "fma")]
+pub(crate) unsafe fn cosine_preprocess_avx(vector: &[f32]) -> Vec<f32> {
+    let n = vector.len();
+    let m = n - (n % 32);
+    let mut ptr: *const f32 = vector.as_ptr();
+    let mut sum256_1: __m256 = _mm256_setzero_ps();
+    let mut sum256_2: __m256 = _mm256_setzero_ps();
+    let mut sum256_3: __m256 = _mm256_setzero_ps();
+    let mut sum256_4: __m256 = _mm256_setzero_ps();
+    let mut i: usize = 0;
+    while i < m {
+        let m256_1 = _mm256_loadu_ps(ptr);
+        sum256_1 = _mm256_fmadd_ps(m256_1, m256_1, sum256_1);
+
+        let m256_2 = _mm256_loadu_ps(ptr.add(8));
+        sum256_2 = _mm256_fmadd_ps(m256_2, m256_2, sum256_2);
+
+        let m256_3 = _mm256_loadu_ps(ptr.add(16));
+        sum256_3 = _mm256_fmadd_ps(m256_3, m256_3, sum256_3);
+
+        let m256_4 = _mm256_loadu_ps(ptr.add(24));
+        sum256_4 = _mm256_fmadd_ps(m256_4, m256_4, sum256_4);
+
+        ptr = ptr.add(32);
+        i += 32;
+    }
+
+    let mut length = hsum256_ps_avx(sum256_1)
+        + hsum256_ps_avx(sum256_2)
+        + hsum256_ps_avx(sum256_3)
+        + hsum256_ps_avx(sum256_4);
+    for i in 0..n - m {
+        length += (*ptr.add(i)).powi(2);
+    }
+    if length < f32::EPSILON {
+        return vector.to_vec();
+    }
+    length = length.sqrt();
+    vector.into_iter().map(|x| x / length).collect()
+}
+
+#[cfg(target_feature = "avx")]
+#[target_feature(enable = "avx")]
+#[target_feature(enable = "fma")]
+pub(crate) unsafe fn dot_similarity_avx(v1: &[f32], v2: &[f32]) -> f32 {
+    let n = v1.len();
+    let m = n - (n % 32);
+    let mut ptr1: *const f32 = v1.as_ptr();
+    let mut ptr2: *const f32 = v2.as_ptr();
+    let mut sum256_1: __m256 = _mm256_setzero_ps();
+    let mut sum256_2: __m256 = _mm256_setzero_ps();
+    let mut sum256_3: __m256 = _mm256_setzero_ps();
+    let mut sum256_4: __m256 = _mm256_setzero_ps();
+    let mut i: usize = 0;
+    while i < m {
+        sum256_1 = _mm256_fmadd_ps(_mm256_loadu_ps(ptr1), _mm256_loadu_ps(ptr2), sum256_1);
+        sum256_2 = _mm256_fmadd_ps(
+            _mm256_loadu_ps(ptr1.add(8)),
+            _mm256_loadu_ps(ptr2.add(8)),
+            sum256_2,
+        );
+        sum256_3 = _mm256_fmadd_ps(
+            _mm256_loadu_ps(ptr1.add(16)),
+            _mm256_loadu_ps(ptr2.add(16)),
+            sum256_3,
+        );
+        sum256_4 = _mm256_fmadd_ps(
+            _mm256_loadu_ps(ptr1.add(24)),
+            _mm256_loadu_ps(ptr2.add(24)),
+            sum256_4,
+        );
+
+        ptr1 = ptr1.add(32);
+        ptr2 = ptr2.add(32);
+        i += 32;
+    }
+
+    let mut result = hsum256_ps_avx(sum256_1)
+        + hsum256_ps_avx(sum256_2)
+        + hsum256_ps_avx(sum256_3)
+        + hsum256_ps_avx(sum256_4);
+
+    for i in 0..n - m {
+        result += (*ptr1.add(i)) * (*ptr2.add(i));
+    }
+    result
 }
 
 #[cfg(test)]
 mod tests {
+    #[cfg(target_feature = "avx")]
     #[test]
-    fn test_euclid() {
-        #[cfg(all(target_arch = "avx", target_feature = "fma",))]
-        if std::arch::is_x86_feature_detected!("fma") && std::arch::is_x86_feature_detected!("avx")
-        {
+    fn test_spaces_avx() {
+        use super::*;
+        use crate::distance::simple::*;
+
+        if is_x86_feature_detected!("avx") && is_x86_feature_detected!("fma") {
             let v1: Vec<f32> = vec![
                 10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                26., 27., 28., 29., 30., 31.,
             ];
             let v2: Vec<f32> = vec![
                 40., 41., 42., 43., 44., 45., 46., 47., 48., 49., 50., 51., 52., 53., 54., 55.,
+                10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.,
+                56., 57., 58., 59., 60., 61.,
             ];
-            let l2 = l2_similarity(&v1, &v2);
-            let l2_simd = unsafe { l2_similarity_avx(&v1, &v2) };
-            assert_eq!(l2, l2_simd);
 
-            let l1 = l1_similarity(&v1, &v2);
-            let l1_simd = unsafe { l1_similarity_avx(&v1, &v2) };
-            assert_eq!(l1, l1_simd);
+            let euclid_simd = unsafe { euclid_similarity_avx(&v1, &v2) };
+            let euclid = euclid_similarity(&v1, &v2);
+            assert_eq!(euclid_simd, euclid);
+
+            let manhattan_simd = unsafe { manhattan_similarity_avx(&v1, &v2) };
+            let manhattan = manhattan_similarity(&v1, &v2);
+            assert_eq!(manhattan_simd, manhattan);
+
+            let dot_simd = unsafe { dot_similarity_avx(&v1, &v2) };
+            let dot = dot_similarity(&v1, &v2);
+            assert_eq!(dot_simd, dot);
+
+            let cosine_simd = unsafe { cosine_preprocess_avx(v1.as_slice()) };
+            let cosine = cosine_preprocess(v1.as_slice());
+            assert_eq!(cosine_simd, cosine);
+        } else {
+            println!("avx test skipped");
         }
     }
 }
