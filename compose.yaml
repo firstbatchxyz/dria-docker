@@ -4,11 +4,15 @@ services:
   ### Dria HNSW Rust code ###
   # depends on Micro API wait-for to complete
   dria-hnsw:
-    # build: ./dria_hnsw
-    image: "firstbatch/dria-hnsw"
+    build: ./dria_hnsw
+    # image: "firstbatch/dria-hnsw"
     environment:
+      - ROCKSDB_PATH=/data/${CONTRACT}
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_ID=${CONTRACT}
+    volumes:
+      - ${WALLET}:/app/config/wallet.json:ro
+      - ${HOME}/.dria/data:/data
     ports:
       - "8080:8080"
     depends_on:
@@ -29,15 +33,17 @@ services:
   ### Micro API for HollowDB ###
   # depends on Redis to start
   micro-api:
-    # build: ./micro_api
-    image: "firstbatch/dria-hollowdb"
+    build: ./micro_api
+    # image: "firstbatch/dria-hollowdb"
     ports:
       - "3000:3000"
     expose:
       - "3000" # used by Micro API wait-for script
     volumes:
       - ${WALLET}:/app/config/wallet.json:ro
+      - ${HOME}/.dria/data:/app/data
     environment:
+      - ROCKSDB_PATH=~/app/data/${CONTRACT}
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_TXID=${CONTRACT}
       - USE_BUNDLR=true # true if your contract uses Bundlr

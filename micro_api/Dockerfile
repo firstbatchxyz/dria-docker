@@ -5,6 +5,9 @@ WORKDIR /app
 COPY . .
 
 RUN yarn set version berry
+
+# yarn install might take time when a non-readonly volume is attached (see https://github.com/yarnpkg/yarn/issues/7747)
+# ~700 seconds on an M2 Macbook Air for example
 RUN yarn install
 
 # Build code
@@ -25,4 +28,5 @@ COPY --from=dependencies /app/node_modules ./node_modules
 EXPOSE 3000
 
 CMD ["./build/index.js"]
+
 

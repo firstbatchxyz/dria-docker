@@ -22,8 +22,7 @@
     "build": "yarn clean && npx tsc",
     "start": "yarn build && node ./build/src/index.js",
     "test": "npx mocha --bail",
-    "clean": "rm -rf ./build",
-    "redis": "redis-server --dir './data'"
+    "clean": "rm -rf ./build"
   },
   "devDependencies": {
     "@types/chai": "^4.3.5",

@@ -229,12 +229,7 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, rocksdbPath: s
           const keys = data.keys ? data.keys : await kv.keys(lastPossibleSortKey);
 
           await redis.del(...keys.map((key) => toSortKeyKey(key)));
-          await rocksdb.batch(
-            keys.map((key) => ({
-              type: "del",
-              key: toValueKey(key),
-            }))
-          );
+          await rocksdb.batch(keys.map((key) => ({ type: "del", key: toValueKey(key) })));
 
           return send(res, StatusCodes.OK, keys.length);
         }
