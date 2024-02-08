@@ -3,6 +3,8 @@ import type { LoggerFactory } from "warp-contracts";
 export default {
   /** Redis URL to connect to. Defaults to `redis://default:redispw@localhost:6379`. */
   REDIS_URL: process.env.REDIS_URL || "redis://default:redispw@localhost:6379",
+  /** Path to Rocksdb storage. */
+  ROCKSDB_ATH: process.env.ROCKSDB_PATH || "./data",
   /** Path to Arweave wallet. */
   WALLET_PATH: process.env.WALLET_PATH || "./config/wallet.json",
   /** Treat values as Bundlr txIds. */
