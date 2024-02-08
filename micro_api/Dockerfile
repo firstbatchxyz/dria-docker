@@ -20,13 +20,13 @@ FROM base as dependencies
 WORKDIR /app
 RUN yarn workspaces focus --production
 
-FROM gcr.io/distroless/nodejs20-debian11
+FROM node:20
 WORKDIR /app
 COPY --from=builder /app/build ./build
 COPY --from=dependencies /app/node_modules ./node_modules
 
 EXPOSE 3000
 
-CMD ["./build/index.js"]
+CMD ["node", "./build/index.js"]
 
 

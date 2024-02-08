@@ -43,7 +43,7 @@ services:
       - ${WALLET}:/app/config/wallet.json:ro
       - ${HOME}/.dria/data:/app/data
     environment:
-      - ROCKSDB_PATH=~/app/data/${CONTRACT}
+      - ROCKSDB_PATH=/app/data/${CONTRACT}
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_TXID=${CONTRACT}
       - USE_BUNDLR=true # true if your contract uses Bundlr
