@@ -1,3 +1,5 @@
+import RocksDB from "rocksdb";
+
 export * from "./warp";
 export * from "./bundlr";
 
@@ -12,12 +14,12 @@ export * from "./bundlr";
  * @template V type of the expected value
  * @returns parsed value
  */
-export function tryParse<V>(value: string | null): V | null {
+export function tryParse<V>(value: RocksDB.Bytes | null): V | null {
   let result = null;
 
   if (value) {
     try {
-      result = JSON.parse(value);
+      result = JSON.parse(value.toString());
     } catch (err) {
       result = value;
     }

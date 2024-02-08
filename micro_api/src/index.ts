@@ -32,6 +32,6 @@ const warp = makeWarp(caches);
 
 const hollowdb = new SDK(wallet, contractTxId, warp);
 
-const server = new http.Server(serve(makeServer(hollowdb, contractTxId)));
+const server = new http.Server(serve(makeServer(hollowdb, `./data/${contractTxId}`, contractTxId)));
 
 server.listen(3000);
