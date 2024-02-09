@@ -49,7 +49,7 @@ describe("crud operations", () => {
     caches = createCaches(contractTxId, redisClient);
     warp = makeLocalWarp(ARWEAVE_PORT, caches);
     const hollowdb = new SDK(owner, contractTxId, warp);
-    const server = makeServer(hollowdb, contractTxId);
+    const server = makeServer(hollowdb, `./test/data/${contractTxId}`, contractTxId);
     service = new http.Server(serve(server));
     url = await listen(service);
     console.log("micro listening at", url);
@@ -185,6 +185,7 @@ describe("crud operations", () => {
 
     it("should do a raw GET", async () => {
       const kv = KEY_VALUES[0];
+
       const getRawResponse = await postData(url, {
         route: "GET_RAW",
         data: {
@@ -261,6 +262,7 @@ describe("crud operations", () => {
       });
       expect(getManyRawResponse.status).to.eq(StatusCodes.OK);
       const body = await getManyRawResponse.json();
+
       (body.values as (typeof KEY_VALUES)[0]["value"][]).forEach((val) => expect(val).to.eq(null));
     });
   });

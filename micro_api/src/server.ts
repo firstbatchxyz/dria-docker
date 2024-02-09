@@ -8,60 +8,41 @@ import { Redis } from "ioredis";
 import type { KeyedSortKeyCacheResult, Request } from "./types";
 import config from "./config";
 import { downloadFromBundlr, progressString, tryParse } from "./util";
+import { existsSync, mkdirSync } from "fs";
+import { RocksdbClient } from "./util/rocksdb";
 
 /**
- * A higher-order function to create a micro server that uses the given HollowDB instance
+ * A higher-order function to create a micro server that uses the given HollowDB instance.
  * @param hollowdb instance of hollowdb
  * @param contractTxId connected contract tx id
  * @template V type of the value stored in hollowdb
  * @returns a `micro` server, should be exported via `module.exports`
  */
-export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: string) {
+export default function makeServer<V = unknown>(hollowdb: SDK<V>, rocksdbPath: string, contractTxId: string) {
   let isReady = false;
   let progress: [number, number] = [0, 0];
 
   const kv = hollowdb.base.warp.kvStorageFactory(contractTxId);
   const redis = kv.storage<Redis>();
 
-  /** Maps a key to its `value` key in Redis. */
+  // create path for Rocksdb
+  if (!existsSync(rocksdbPath)) {
+    mkdirSync(rocksdbPath, { recursive: true });
+  }
+
+  /** Maps a key to its `value` key in Rocksdb. */
   const toValueKey = (key: string) => `${contractTxId}.value.${key}`;
   /** Maps a key to its `sortKey` key in Redis. */
   const toSortKeyKey = (key: string) => `${contractTxId}.sortKey.${key}`;
-  /** Given keys, sortKeys and values, `mset`s them to their respective keys.
-   *
-   * Can provide optional value overrides, which is used in the case of Bundlr downloads where instead of writing
-   * the original value that is the txId, we write the downloaded data from Bundlr. */
-  const refreshRedis = async (results: KeyedSortKeyCacheResult<V>[], values?: V[]) => {
-    if (values && values.length !== results.length) {
-      throw new Error("array length mismatch");
-    }
 
-    // store the `value`s itself within the cache for each `key`
-    const valuePairs = results.map(({ key, sortKeyCacheResult: { cachedValue } }, i) => {
-      const val = values
-        ? typeof values[i] === "string"
-          ? (values[i] as string)
-          : JSON.stringify(values[i])
-        : JSON.stringify(cachedValue);
-      return [toValueKey(key), val];
-    });
-    await redis.mset(...valuePairs.flat());
-
-    // store the `sortKey`s for later refreshes to see if a `value` is stale
-    const sortKeyPairs = results.map(({ key, sortKeyCacheResult: { sortKey } }) => [toSortKeyKey(key), sortKey]);
-    await redis.mset(...sortKeyPairs.flat());
-  };
-
-  /** Refresh the cache with values.
-   * @returns number of refreshed keys
-   */
+  /** Refresh the cache with values, returning the number of refreshed keys. */
   async function refresh(): Promise<number> {
     console.log(`\nRefreshing keys (${contractTxId})\n`);
 
     // refreshes to the latest state
     await hollowdb.base.readState();
 
-    // find the latest sortKey & value for each `key` in the cache
+    // get all keys
     const keys = await kv.keys(lastPossibleSortKey);
 
     // return early if there are no keys
@@ -70,6 +51,7 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
       return 0;
     }
 
+    // get the last sortKey for each key
     const sortKeyCacheResults = await Promise.all(keys.map((key) => kv.getLast(key)));
 
     // from these values, get the ones that are out-of-date (i.e. stale)
@@ -87,6 +69,39 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
     if (staleResults.length === 0) {
       return 0;
     }
+
+    const rocksdb = new RocksdbClient(rocksdbPath);
+
+    /**
+     * Given keys, sortKeys and values, `mset`s them to their respective keys.
+     *
+     * Can provide optional value overrides, which is used in the case of Bundlr downloads where instead of writing
+     * the original value that is the txId, we write the downloaded data from Bundlr.
+     */
+    const refreshRedis = async (results: KeyedSortKeyCacheResult<V>[], values?: V[]) => {
+      if (values && values.length !== results.length) {
+        throw new Error("array length mismatch");
+      }
+
+      // store the `value`s itself within the cache for each `key`
+      const valuePairs = results.map(({ key, sortKeyCacheResult: { cachedValue } }, i) => {
+        const val = values
+          ? // override with given value
+            typeof values[i] === "string"
+            ? (values[i] as string)
+            : JSON.stringify(values[i])
+          : // use own value
+            JSON.stringify(cachedValue);
+        return [toValueKey(key), val] as [string, string];
+      });
+
+      // write values to disk (as they may be too much for the memory)
+      await rocksdb.setMany(valuePairs);
+
+      // store the `sortKey`s for later refreshes to see if a `value` is stale
+      const sortKeyPairs = results.map(({ key, sortKeyCacheResult: { sortKey } }) => [toSortKeyKey(key), sortKey]);
+      await redis.mset(...sortKeyPairs.flat());
+    };
 
     // update values in Redis
     if (config.USE_BUNDLR) {
@@ -117,6 +132,8 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
       await refreshRedis(staleResults);
     }
 
+    await rocksdb.close();
+
     return staleResults.length;
   }
 
@@ -137,15 +154,13 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
       return send(
         res,
         StatusCodes.SERVICE_UNAVAILABLE,
-        `Contract cache is still loading, please try again shortly: ${progressString(
-          progress[0],
-          progress[1]
-        )} values loaded.`
+        // prettier-ignore
+        `Contract cache is still loading, please try again shortly: ${progressString(progress[0], progress[1])} values loaded.`
       );
     }
 
     // parse the request, it is either a (GET) "/key" or (POST)
-    const url = req.url || "/";
+    const url = req.url ?? "/";
     const reqBody: Request<V> =
       url === "/"
         ? // this is a POST request with JSON body
@@ -165,8 +180,11 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
           return send(res, StatusCodes.OK, { value });
         }
         case "GET_RAW": {
-          const rawValue = await redis.get(toValueKey(data.key));
+          const rocksdb = new RocksdbClient(rocksdbPath);
+          await rocksdb.open();
+          const rawValue = await rocksdb.get(toValueKey(data.key));
           const value = tryParse<V>(rawValue);
+          await rocksdb.close();
           return send(res, StatusCodes.OK, { value });
         }
         case "GET_MANY": {
@@ -174,8 +192,12 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
           return send(res, StatusCodes.OK, { values });
         }
         case "GET_MANY_RAW": {
-          const rawValues = await redis.mget(...data.keys.map((key) => toValueKey(key)));
+          const rocksdb = new RocksdbClient(rocksdbPath);
+          await rocksdb.open();
+          const rawValues = await rocksdb.getMany(data.keys.map((key) => toValueKey(key)));
           const values = rawValues.map((rawValue) => tryParse<V>(rawValue));
+          await rocksdb.close();
+
           return send(res, StatusCodes.OK, { values });
         }
         case "PUT": {
@@ -209,7 +231,11 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, contractTxId: 
           const keys = data.keys ? data.keys : await kv.keys(lastPossibleSortKey);
 
           await redis.del(...keys.map((key) => toSortKeyKey(key)));
-          await redis.del(...keys.map((key) => toValueKey(key)));
+
+          const rocksdb = new RocksdbClient(rocksdbPath);
+          await rocksdb.open();
+          await rocksdb.removeMany(keys.map((key) => toValueKey(key)));
+          await rocksdb.close();
 
           return send(res, StatusCodes.OK, keys.length);
         }

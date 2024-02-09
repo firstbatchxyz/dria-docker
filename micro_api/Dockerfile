@@ -5,6 +5,9 @@ WORKDIR /app
 COPY . .
 
 RUN yarn set version berry
+
+# yarn install might take time when a non-readonly volume is attached (see https://github.com/yarnpkg/yarn/issues/7747)
+# ~700 seconds on an M2 Macbook Air for example
 RUN yarn install
 
 # Build code
@@ -17,12 +20,14 @@ FROM base as dependencies
 WORKDIR /app
 RUN yarn workspaces focus --production
 
-FROM gcr.io/distroless/nodejs20-debian11
+FROM node:20-slim
+# FROM node:20-alpine
+# RUN apk add gcompat
+
 WORKDIR /app
 COPY --from=builder /app/build ./build
 COPY --from=dependencies /app/node_modules ./node_modules
 
 EXPOSE 3000
 
-CMD ["./build/index.js"]
-
+CMD ["node", "./build/index.js"]

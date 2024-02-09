@@ -18,6 +18,10 @@ FROM --platform=$BUILDPLATFORM rust:1.71 as builder
 #   linux/amd64
 #   linux/arm64
 #   linux/arm
+#
+# To build an image & push them to Docker hub for this Dockerfile:
+#
+# docker buildx build --platform=linux/amd64,linux/arm64,linux/arm . -t firstbatch/dria-hnsw:latest --builder=dria-builder --push   
 
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
@@ -27,6 +31,9 @@ RUN echo "Target platform: $TARGETPLATFORM"
 # install Cmake
 RUN apt-get update
 RUN apt-get install -y cmake
+
+# libclang needed by rocksdb
+RUN apt-get install -y clang
 
 # use nightly Rust
 RUN rustup install nightly-2023-07-25
