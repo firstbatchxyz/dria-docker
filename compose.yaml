@@ -4,8 +4,8 @@ services:
   ### Dria HNSW Rust code ###
   # depends on HollowDB wait-for to complete
   dria-hnsw:
-    build: ./dria_hnsw
-    # image: "firstbatch/dria-hnsw"
+    # build: ./dria_hnsw
+    image: "firstbatch/dria-hnsw"
     environment:
       - ROCKSDB_PATH=/data/${CONTRACT}
       - REDIS_URL=redis://default:redispw@redis:6379
