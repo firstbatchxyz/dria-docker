@@ -5,3 +5,4 @@ config
 .env.example
 .gitignore
 .mocharc.json
+node_modules

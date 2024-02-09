@@ -20,7 +20,10 @@ FROM base as dependencies
 WORKDIR /app
 RUN yarn workspaces focus --production
 
-FROM node:20
+FROM node:20-slim
+# FROM node:20-alpine
+# RUN apk add gcompat
+
 WORKDIR /app
 COPY --from=builder /app/build ./build
 COPY --from=dependencies /app/node_modules ./node_modules
@@ -28,5 +31,3 @@ COPY --from=dependencies /app/node_modules ./node_modules
 EXPOSE 3000
 
 CMD ["node", "./build/index.js"]
-
-
