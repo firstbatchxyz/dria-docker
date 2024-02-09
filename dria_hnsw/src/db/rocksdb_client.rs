@@ -107,48 +107,63 @@ impl RocksdbClient {
     }
 
     pub fn get_datasize(&self) -> Result<usize, DeserializeError> {
-        let datasize: String = format!("{}.value.datasize", self.tag);
+        let datasize_key: String = format!("{}.value.datasize", self.tag);
         let value = self
             .client
-            .get(datasize.as_bytes())
+            .get(datasize_key.as_bytes())
             .map_err(|_| DeserializeError::RocksDBConnectionError)?;
 
         let datasize = match value {
-            Some(value) => datasize.parse::<usize>().unwrap()
-            , // Convert bytes to String and handle UTF-8 error
+            Some(value_bytes) => {
+                let value_str = String::from_utf8(value_bytes)
+                    .map_err(|_| DeserializeError::InvalidForm)?; // Handle UTF-8 error gracefully
+                value_str.parse::<usize>()
+                    .map_err(|_| DeserializeError::InvalidForm)? // Handle parse error gracefully
+            },
             None => return Err(DeserializeError::MissingKey), // Handle case where key is not found
         };
         Ok(datasize)
     }
 
     pub fn get_num_layers(&self) -> Result<usize, DeserializeError> {
-        let num_layers: String = format!("{}.value.num_layers", self.tag);
+        let num_layers_key: String = format!("{}.value.num_layers", self.tag);
         let value = self
             .client
-            .get(num_layers.as_bytes())
+            .get(num_layers_key.as_bytes())
             .map_err(|_| DeserializeError::RocksDBConnectionError)?;
 
         let num_layers = match value {
-            Some(value) => num_layers.parse::<usize>().unwrap()
-            , // Convert bytes to String and handle UTF-8 error
+            Some(value_bytes) => {
+                let value_str = String::from_utf8(value_bytes)
+                    .map_err(|_| DeserializeError::InvalidForm)?; // Handle UTF-8 error gracefully
+                value_str.parse::<usize>()
+                    .map_err(|_| DeserializeError::InvalidForm)? // Handle parse error gracefully
+            },
             None => return Err(DeserializeError::MissingKey), // Handle case where key is not found
         };
         Ok(num_layers)
     }
 
     pub fn get_ep(&self) -> Result<usize, DeserializeError> {
-        let ep: String = format!("{}.value.ep", self.tag);
+        let ep_key: String = format!("{}.value.ep", self.tag);
         let value = self
             .client
-            .get(ep.as_bytes())
+            .get(ep_key.as_bytes())
             .map_err(|_| DeserializeError::RocksDBConnectionError)?;
 
-        let ep = match value {
-            Some(value) => ep.parse::<usize>().unwrap()
-            , // Convert bytes to String and handle UTF-8 error
+        // Attempt to convert the fetched value from bytes to String, then parse it into usize
+        let ep_usize = match value {
+            Some(value_bytes) => {
+                // Convert bytes to String
+                let value_str = String::from_utf8(value_bytes)
+                    .map_err(|_| DeserializeError::InvalidForm)?; // Handle UTF-8 error gracefully
+                // Parse String to usize
+                value_str.parse::<usize>()
+                    .map_err(|_| DeserializeError::InvalidForm)? // Handle parse error gracefully
+            },
             None => return Err(DeserializeError::MissingKey), // Handle case where key is not found
         };
-        Ok(ep)
+        Ok(ep_usize)
     }
 
     pub fn get_metadata(&self, idx: usize) -> Result<Value, DeserializeError> {
