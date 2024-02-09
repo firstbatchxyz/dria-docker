@@ -117,6 +117,7 @@ export default function makeServer<V = unknown>(hollowdb: SDK<V>, rocksdbPath: s
 
         const msg = `\t${progressString(progress[0], progress[1])} values downloaded`;
         console.time(msg);
+        // TODO: add error catch & try here, expecting AxiosError
         const batchValues = await Promise.all(
           batchResults.map((result) => downloadFromBundlr<{ data: V }>(result.sortKeyCacheResult.cachedValue as string))
         );

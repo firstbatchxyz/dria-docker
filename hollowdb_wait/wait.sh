@@ -15,7 +15,7 @@ while true; do
 
   # check if exit code of curl is 0
   if [ $? -eq 0 ]; then
-    echo "HollowDB Micro API is ready!"
+    echo "HollowDB container is ready!"
     exit 0
   fi
 
