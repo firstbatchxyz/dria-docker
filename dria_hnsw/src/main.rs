@@ -4,8 +4,7 @@ use actix_web::{web, App, HttpServer};
 use dria_hnsw::worker::{fetch, get_health_status, query};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-//use lambda_web::{run_actix_on_lambda};
-//use userembeddings::middlewares::ext_client::ExternalClient;
+use dria_hnsw::middlewares::cache::{NodeCache, PointCache};
 
 pub fn config(conf: &mut web::ServiceConfig) {
     conf.service(get_health_status);
@@ -13,11 +12,21 @@ pub fn config(conf: &mut web::ServiceConfig) {
     conf.service(fetch);
 }
 
+
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+
+
+
+    let node_cache = web::Data::new(NodeCache::new());
+    let point_cache = web::Data::new(PointCache::new());
+
     let factory = move || {
         App::new()
             //.wrap(ExternalClient)
+            .app_data(node_cache.clone())
+            .app_data(point_cache.clone())
             .configure(config)
             .wrap(Logger::default())
             .wrap(Cors::permissive())
