@@ -1,0 +1,31 @@
+{
+  "author": "FirstBatch Team <dev@firstbatch.xyz>",
+  "private": true,
+  "contributors": [
+    "Erhan Tezcan <erhan@firstbatch.xyz>"
+  ],
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "yarn build && node ./build/index.js"
+  },
+  "dependencies": {
+    "fastify": "^4.26.1",
+    "hollowdb": "^1.4.1",
+    "ioredis": "^5.3.2",
+    "levelup": "^5.1.1",
+    "rocksdb": "^5.2.1",
+    "warp-contracts": "^1.4.34"
+  },
+  "devDependencies": {
+    "@types/levelup": "^5.1.5",
+    "@types/node": "^20.11.17",
+    "@types/rocksdb": "^3.0.5",
+    "typescript": "^5.3.3"
+  },
+  "packageManager": "yarn@4.1.0",
+  "prettier": {
+    "printWidth": 120
+  }
+}
