@@ -11,12 +11,14 @@
     "start": "yarn build && node ./build/index.js"
   },
   "dependencies": {
+    "axios": "^1.6.7",
     "fastify": "^4.26.1",
     "hollowdb": "^1.4.1",
     "ioredis": "^5.3.2",
     "levelup": "^5.1.1",
     "rocksdb": "^5.2.1",
-    "warp-contracts": "^1.4.34"
+    "warp-contracts": "^1.4.34",
+    "warp-contracts-redis": "^0.4.2"
   },
   "devDependencies": {
     "@types/levelup": "^5.1.5",

@@ -15,6 +15,9 @@ export default {
   WARP_LOG_LEVEL: (process.env.WARP_LOG_LEVEL || "info") as Parameters<typeof LoggerFactory.INST.logLevel>[0],
   /** How many fetches at once should be made to download Bundlr data? FBS stands for "Fetch Batch Size". */
   BUNDLR_FBS: parseInt(process.env.BUNDLR_FBS || "40"),
-  /** Base URL for Bundlr downloads. */
-  DOWNLOAD_BASE_URL: "https://arweave.net",
+  /** Configurations for Bundlr downloads. */
+  DOWNLOAD: {
+    BASE_URL: "https://arweave.net",
+    TIMEOUT: 50_000, // (ms)
+  },
 } as const;
