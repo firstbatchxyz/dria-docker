@@ -5,15 +5,16 @@ import { RedisCache, type RedisOptions } from "warp-contracts-redis";
 import type { CacheTypes } from "../types";
 import config from "../configurations";
 
+export class HollowdbClient {}
+
 /**
  * Utility to create Warp Redis caches.
  *
  * @param contractTxId contract transaction id to be used as prefix in the keys
- * @param client optional client to used a self-managed cache, i.e. you are responsible from
- * opening and closing the client.
+ * @param client Redis client to use a self-managed cache
  * @returns caches
  */
-export function createCaches(contractTxId: string, client?: Redis): CacheTypes<RedisCache> {
+export function createCaches(contractTxId: string, client: Redis): CacheTypes<RedisCache> {
   const defaultCacheOptions: CacheOptions = {
     inMemory: true,
     subLevelSeparator: "|",
@@ -21,7 +22,7 @@ export function createCaches(contractTxId: string, client?: Redis): CacheTypes<R
   };
 
   // if a client exists, use it; otherwise connect via URL
-  const redisOptions: RedisOptions = client ? { client } : { url: config.REDIS_URL };
+  const redisOptions: RedisOptions = { client };
 
   return {
     state: new RedisCache(

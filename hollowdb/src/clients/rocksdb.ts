@@ -3,9 +3,15 @@ import Rocksdb from "rocksdb";
 
 export class RocksdbClient {
   db: ReturnType<typeof Levelup>;
+  contractTxId: string;
 
-  constructor(path: string) {
+  constructor(path: string, contractTxId: string) {
     this.db = Levelup(Rocksdb(path));
+    this.contractTxId = contractTxId;
+  }
+
+  private toValueKey(key: string) {
+    return `${this.contractTxId}.value.${key}`;
   }
 
   async close() {
@@ -21,33 +27,35 @@ export class RocksdbClient {
   }
 
   async get(key: string) {
-    return await this.db.get(key);
+    const value = await this.db.get(this.toValueKey(key));
+    return this.tryParse(value);
   }
 
   async getMany(keys: string[]) {
-    return await this.db.getMany(keys);
+    const values = await this.db.getMany(keys.map((k) => this.toValueKey(k)));
+    return values.map((v) => this.tryParse(v));
   }
 
   async set(key: string, value: string) {
-    await this.db.put(key, value);
+    await this.db.put(this.toValueKey(key), value);
   }
 
   async setMany(pairs: [string, string][]) {
     await this.db.batch(
       pairs.map(([key, value]) => ({
         type: "put",
-        key: key,
+        key: this.toValueKey(key),
         value: value,
       }))
     );
   }
 
   async remove(key: string) {
-    await this.db.del(key);
+    await this.db.del(this.toValueKey(key));
   }
 
   async removeMany(keys: string[]) {
-    await this.db.batch(keys.map((key) => ({ type: "del", key })));
+    await this.db.batch(keys.map((key) => ({ type: "del", key: this.toValueKey(key) })));
   }
 
   /**
@@ -61,7 +69,7 @@ export class RocksdbClient {
    * @template V type of the expected value
    * @returns parsed value, or `null` if it could not be parsed
    */
-  static tryParse<V>(value: Rocksdb.Bytes | null): V | null {
+  private tryParse(value: Rocksdb.Bytes | null): unknown | null {
     let result = null;
 
     if (value) {

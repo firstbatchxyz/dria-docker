@@ -450,6 +450,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fastify/type-provider-typebox@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "@fastify/type-provider-typebox@npm:4.0.0"
+  peerDependencies:
+    "@sinclair/typebox": ">=0.26 <=0.32"
+  checksum: 10c0/1134f9e8873c4057a2dc18fc85729e3ea3a33bcaaf91efd66bfca63ac2bf9715f33f3412643ecba0a5120e7861235580b13f4bc1a46dd12c5c6ecc4ed5574a46
+  languageName: node
+  linkType: hard
+
 "@iden3/bigarray@npm:0.0.2":
   version: 0.0.2
   resolution: "@iden3/bigarray@npm:0.0.2"
@@ -1269,6 +1278,13 @@ __metadata:
   version: 0.11.0
   resolution: "@pkgjs/parseargs@npm:0.11.0"
   checksum: 10c0/5bd7576bb1b38a47a7fc7b51ac9f38748e772beebc56200450c4a817d712232b8f1d3ef70532c80840243c657d491cf6a6be1e3a214cff907645819fdc34aadd
+  languageName: node
+  linkType: hard
+
+"@sinclair/typebox@npm:^0.32.14":
+  version: 0.32.14
+  resolution: "@sinclair/typebox@npm:0.32.14"
+  checksum: 10c0/ed8dca0ec2983175613237b58d17c69da6fa0af884a393c4a76281063dcae0eb043bf8e150baa88bab294c80cdd901f383f21329b0a2adbbdd9b1dfdf6d7b92d
   languageName: node
   linkType: hard
 
@@ -3821,6 +3837,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "root-workspace-0b6124@workspace:."
   dependencies:
+    "@fastify/type-provider-typebox": "npm:^4.0.0"
+    "@sinclair/typebox": "npm:^0.32.14"
     "@types/levelup": "npm:^5.1.5"
     "@types/node": "npm:^20.11.17"
     "@types/rocksdb": "npm:^3.0.5"
