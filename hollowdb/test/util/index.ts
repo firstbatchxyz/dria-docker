@@ -55,8 +55,7 @@ export class FetchClient {
 /**
  * Creates a local warp instance, also uses the `DeployPlugin`.
  *
- * WARNING: Do not use `useStateCache` and `useContractCache` together with
- * `forLocal`.
+ * WARNING: Do not use `useStateCache` and `useContractCache` together with `forLocal`.
  */
 export function makeLocalWarp(port: number, caches: CacheTypes): Warp {
   return WarpFactory.forLocal(port).use(new DeployPlugin()).useKVStorageFactory(caches.kvFactory);

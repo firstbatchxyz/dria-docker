@@ -46,6 +46,9 @@ export const refresh: RouteHandler = async ({ server }, reply) => {
   }
 
   const rocksdb = new RocksdbClient(server.rocksdbPath, server.contractTxId);
+  console.log("Opening RocksDB");
+  await rocksdb.open();
+  console.log("Done");
 
   const refreshValues = async (results: KeyedSortKeyCacheResult[], values?: unknown[]) => {
     if (values && values.length !== results.length) {

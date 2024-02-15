@@ -117,12 +117,12 @@ describe("crud operations", () => {
       }
     });
 
-    it.skip("should refresh the cache for raw GET operations", async () => {
+    it("should refresh the cache for raw GET operations", async () => {
       const refreshResponse = await client.post("/refresh");
       expect(refreshResponse.status).toBe(200);
     });
 
-    it.skip("should do a raw GET", async () => {
+    it("should do a raw GET", async () => {
       const { key, value } = KEY_VALUES[0];
 
       const getRawResponse = await client.post<Get>("/getRaw", { key });
