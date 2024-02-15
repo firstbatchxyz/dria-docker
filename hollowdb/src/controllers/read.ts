@@ -8,8 +8,8 @@ export const get: RouteHandler<{ Params: Get }> = async ({ server, params }) => 
   return { value };
 };
 
-export const getMany: RouteHandler<{ Params: GetMany }> = async ({ server, params }) => {
-  const values = await server.hollowdb.getMany(params.keys);
+export const getMany: RouteHandler<{ Body: GetMany }> = async ({ server, body }) => {
+  const values = await server.hollowdb.getMany(body.keys);
   return { values };
 };
 
@@ -23,11 +23,11 @@ export const getRaw: RouteHandler<{ Params: Get }> = async ({ server, params }) 
   return { value };
 };
 
-export const getManyRaw: RouteHandler<{ Params: GetMany }> = async ({ server, params }) => {
+export const getManyRaw: RouteHandler<{ Body: GetMany }> = async ({ server, body }) => {
   const rocksdb = new RocksdbClient(configurations.ROCKSDB_PATH, server.hollowdb.contractTxId);
 
   await rocksdb.open();
-  const values = await rocksdb.getMany(params.keys);
+  const values = await rocksdb.getMany(body.keys);
   await rocksdb.close();
 
   return { values };
