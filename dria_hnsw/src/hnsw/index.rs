@@ -1,17 +1,19 @@
 extern crate redis;
 
-use ahash::AHashMap;
 use hashbrown::HashSet;
+use redis::Commands;
 use std::cmp::Reverse;
 use std::collections::HashMap;
-use std::fmt::format;
 
+use ahash::AHashMap;
 use dashmap::{DashMap, DashSet};
+use mini_moka::sync::Cache;
 use std::borrow::Borrow;
+use std::f32::NAN;
+use std::fmt::format;
+use std::num::FpCategory::Nan;
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::sync::Arc;
-
-use redis::Commands;
 
 use rand::{thread_rng, Rng, SeedableRng};
 
@@ -22,14 +24,16 @@ use prost_types::Any; // For handling the Any type
 use crate::errors::errors::DeserializeError;
 use crate::hnsw::utils::{create_max_heap, create_min_heap, IntoHeap, IntoMap, Numeric};
 
-use crate::db::rocksdb_client::RocksdbClient;
 use crate::distance::metric::{Metric, MetricCosine, MetricL1, MetricL2};
 use crate::hnsw::scalar::ScalarQuantizer;
 use rayon::prelude::*;
 use serde_json::{json, Value};
-use tokio::time::Instant;
 
 use crate::hnsw::sync_map::SynchronizedNodes;
+use tokio::time::Instant;
+use crate::db::rocksdb_client::RocksdbClient;
+
+pub const SINGLE_THREADED_HNSW_BUILD_THRESHOLD: usize = 256;
 
 /*
 Redis Scheme
@@ -37,7 +41,6 @@ Redis Scheme
 Points: "0", "1" ...
 Graph:  graph_level.idx : "2.5320" layer 2, node idx 5320
 */
-
 pub struct HNSW {
     pub m: usize,
     pub m_max0: usize,
@@ -56,13 +59,12 @@ impl HNSW {
         ef_construction: usize,
         ef: usize,
         contract_id: String,
-        metric: Option<String>,
+        metric: Option<String>
     ) -> HNSW {
         let m = M;
         let m_max0 = M * 2;
         let ml = 1.0 / (M as f32).ln();
-        let db = RocksdbClient::new(contract_id).unwrap();
-
+        let db = RocksdbClient::new(contract_id).expect("Error creating RocksdbClient");
         let sq = ScalarQuantizer::new(256, 1000, 256);
 
         HNSW {
@@ -108,7 +110,7 @@ impl HNSW {
     fn get_points_w_memory(
         &self,
         indices: &Vec<u32>,
-        point_map: Arc<DashMap<String, Point>>,
+        point_map: Cache<String, Point>,
     ) -> Vec<Point> {
         // Initialize points with None to reserve the space and maintain order
         let mut points: Vec<Option<Point>> = vec![None; indices.len()];
@@ -130,6 +132,7 @@ impl HNSW {
                 .iter()
                 .map(|&(_, idx)| idx)
                 .collect();
+
             let fetched_points = self.db.get_points(&missing_indices);
 
             if fetched_points.is_err() {
@@ -216,6 +219,115 @@ impl HNSW {
         };
     }
 
+    pub fn insert_w_preset(
+        &self,
+        idx: usize,
+        node_map: Arc<SynchronizedNodes>,
+        point_map: Cache<String, Point>,
+        nl: Arc<AtomicUsize>,
+        epa: Arc<AtomicIsize>,
+    ) -> Result<(), DeserializeError> {
+        let mut W = HashMap::new();
+
+        let mut ep_index = None;
+        let ep_index_ = epa.load(Ordering::SeqCst);
+        if ep_index_ != -1 {
+            ep_index = Some(ep_index_ as u32);
+        }
+
+        let mut num_layers = nl.load(Ordering::Relaxed);
+
+        let L = if num_layers == 0 { 0 } else { num_layers - 1 };
+        let l = self.select_layer();
+
+        let qs = self.get_points_w_memory(&vec![idx as u32], point_map.clone());
+        let q = qs[0].v.clone();
+
+        if ep_index.is_some() {
+            let ep_index_ = ep_index.unwrap();
+
+            let points = self.get_points_w_memory(&vec![ep_index_], point_map.clone());
+            let point = points.first().unwrap();
+            let dist = self.distance(&q, &point.v, &self.metric);
+            let mut ep = HashMap::from([(ep_index_, dist)]);
+
+            for i in ((l + 1)..=L).rev() {
+                W = self.search_layer(&q, ep.clone(), 1, i, node_map.clone(), point_map.clone())?;
+
+                if let Some((_, value)) = W.iter().next() {
+                    if &dist < value {
+                        ep = W;
+                    }
+                }
+            }
+
+            for l_c in (0..=std::cmp::min(L, l)).rev() {
+                W = self.search_layer(
+                    &q,
+                    ep,
+                    self.ef_construction,
+                    l_c,
+                    node_map.clone(),
+                    point_map.clone(),
+                )?;
+
+                //upsert expire = true by default, populate upserted_keys for replication
+                node_map.insert_and_notify(&LayerNode::new(l_c, idx));
+
+                ep = W.clone();
+                let neighbors = self.select_neighbors(&q, W, l_c, true);
+
+                let M = if l_c == 0 { self.m_max0 } else { self.m };
+
+                //read neighbors of all nodes in selected neighbors
+                let mut indices = neighbors.iter().map(|x| *x.0).collect::<Vec<u32>>();
+                indices.push(idx as u32);
+                let idx_i = indices.len() - 1;
+
+                let mut nodes = self.get_neighbors_w_memory(l_c, &indices, node_map.clone());
+
+                for (i, (e_i, dist)) in neighbors.iter().enumerate() {
+                    if i == idx_i {
+                        // We want to skip last layernode, which is idx -> layernode
+                        continue;
+                    }
+
+                    nodes[i].neighbors.insert(idx as u32, *dist);
+                    nodes[idx_i].neighbors.insert(*e_i, *dist);
+                }
+
+                for (i, (e_i, dist)) in neighbors.iter().enumerate() {
+                    if i == idx_i {
+                        // We want to skip last layernode, which is idx -> layernode
+                        continue;
+                    }
+                    let eConn = nodes[i].neighbors.clone();
+                    if eConn.len() > M {
+                        let eNewConn = self.select_neighbors(&q, eConn, l_c, true);
+                        nodes[i].neighbors = eNewConn.clone();
+                    }
+                }
+
+                node_map.insert_batch_and_notify(nodes);
+            }
+        }
+
+        for i in num_layers..=l {
+            node_map.insert_and_notify(&LayerNode::new(i, idx));
+            let _ = epa.fetch_update(Ordering::SeqCst, Ordering::Relaxed, |x| Some(idx as isize));
+        }
+
+        let _ = nl.fetch_update(Ordering::SeqCst, Ordering::Acquire, |v| {
+            if l + 1 > v {
+                Some(l + 1)
+            } else {
+                None
+            }
+        });
+
+        Ok(())
+    }
+
     fn search_layer(
         &self,
         q: &Vec<f32>,
@@ -223,7 +335,7 @@ impl HNSW {
         ef: usize,
         l_c: usize,
         node_map: Arc<SynchronizedNodes>,
-        point_map: Arc<DashMap<String, Point>>,
+        point_map: Cache<String, Point>,
     ) -> Result<HashMap<u32, f32>, DeserializeError> {
         let mut v = HashSet::new();
 
@@ -245,7 +357,18 @@ impl HNSW {
             let layernd = self.get_neighbor_w_memory(l_c, c.1 as usize, node_map.clone());
 
             let mut pairs: Vec<_> = layernd.neighbors.into_iter().collect();
-            pairs.sort_by(|&(_, a), &(_, b)| a.partial_cmp(&b).unwrap());
+            //pairs.sort_by(|&(_, a), &(_, b)| a.partial_cmp(&b).unwrap());
+            pairs.sort_by(|&(_, a), &(_, b)| {
+                if a.is_nan() || b.is_nan() {
+                    println!("NaN value detected: a = {}, b = {}", a, b);
+                    std::cmp::Ordering::Greater
+                } else {
+                    a.partial_cmp(&b).unwrap_or_else(|| {
+                        println!("Unexpected comparison error: a = {}, b = {}", a, b);
+                        std::cmp::Ordering::Greater
+                    })
+                }
+            });
             let sorted_keys: Vec<u32> = pairs.into_iter().map(|(k, _)| k).collect();
 
             let neighbors: Vec<u32> = sorted_keys
@@ -284,6 +407,7 @@ impl HNSW {
                 return Ok(HashMap::new());
             }
         }
+
         Ok(W.into_map())
     }
 
@@ -328,32 +452,36 @@ impl HNSW {
         &self,
         q: &Vec<f32>,
         K: usize,
-        re_rank: bool,
         node_map: Arc<SynchronizedNodes>,
-        point_map: Arc<DashMap<String, Point>>,
+        point_map: Cache<String, Point>,
     ) -> Vec<Value> {
         let mut W = HashMap::new();
 
         let ep_index = self.db.get_ep().expect("") as u32;
         let num_layers = self.db.get_num_layers().expect("Error getting num_layers");
 
+        let st = tokio::time::Instant::now();
         let points = self.get_points_w_memory(&vec![ep_index], point_map.clone());
-
+        println!("get_points_w_memory: {:?}", st.elapsed().as_millis());
         let point = points.first().unwrap();
         let dist = self.distance(&q, &point.v, &self.metric);
         let mut ep = HashMap::from([(ep_index, dist)]);
 
+        let st = tokio::time::Instant::now();
         for l_c in (1..=num_layers - 1).rev() {
             W = self
                 .search_layer(&q, ep, 1, l_c, node_map.clone(), point_map.clone())
                 .expect("Error searching layer");
             ep = W;
         }
+        println!("search 1: {:?}", st.elapsed().as_millis());
 
+        let st = tokio::time::Instant::now();
         let ep_ = self
             .search_layer(q, ep, self.ef, 0, node_map.clone(), point_map.clone())
             .expect("Error searching layer");
 
+        println!("search 2: {:?}", st.elapsed().as_millis());
         let mut heap = ep_.into_minheap();
         let mut sorted_vec = Vec::new();
         while !heap.is_empty() && sorted_vec.len() < K {
@@ -363,15 +491,9 @@ impl HNSW {
         let indices = sorted_vec.iter().map(|x| x.0).collect::<Vec<u32>>();
         let metadata = self
             .db
-            .get_metadatas(indices.clone())
+            .get_metadatas(indices)
             .expect("Error getting metadatas");
-        if re_rank {
-            return metadata
-                .iter()
-                .zip(indices.iter())
-                .map(|(x, y)| json!({"id":y, "metadata":x}))
-                .collect::<Vec<Value>>();
-        }
+
         let result = sorted_vec
             .iter()
             .zip(metadata.iter())
