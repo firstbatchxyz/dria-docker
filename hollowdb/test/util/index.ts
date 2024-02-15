@@ -41,7 +41,7 @@ export class FetchClient {
    * @returns response object
    */
   async post<Body = unknown>(url: string, data?: Body) {
-    const body = data ? JSON.stringify(data) : undefined;
+    const body = JSON.stringify(data ?? {});
     return fetch(this.baseUrl + url, {
       method: "POST",
       headers: {
@@ -49,16 +49,6 @@ export class FetchClient {
       },
       body,
     });
-  }
-
-  /**
-   * GET a key from database.
-   * @param url url
-   * @param key key
-   * @returns response object
-   */
-  async getKey(key: string) {
-    return fetch(this.baseUrl + "/get/" + key);
   }
 }
 

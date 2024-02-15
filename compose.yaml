@@ -2,7 +2,6 @@ version: "3.8"
 
 services:
   ### Dria HNSW Rust code ###
-  # depends on HollowDB wait-for to complete
   dria-hnsw:
     # build: ./dria_hnsw
     image: "firstbatch/dria-hnsw"
@@ -19,8 +18,6 @@ services:
         condition: service_completed_successfully
 
   ### HollowDBs API 'wait-for' script ###
-  # will complete when it makes sure HollowDB has refreshed everything
-  # depends on HollowDB to start
   hollowdb-wait-for:
     # build: ./hollowdb_wait
     image: "firstbatch/dria-hollowdb-wait-for"
@@ -30,10 +27,8 @@ services:
       - hollowdb
 
   ### Wait for HollowDB ###
-  # depends on Redis to start
   hollowdb:
-    # TODO: rename micro_api to hollowdb
-    # build: ./micro_api
+    # build: ./hollowdb
     image: "firstbatch/dria-hollowdb"
     ports:
       - "3000:3000"

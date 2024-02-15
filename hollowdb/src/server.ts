@@ -1,24 +1,32 @@
-import fastify from "fastify";
+import fastify, { LogLevel } from "fastify";
 import type { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
 import { get, getMany, getManyRaw, getRaw, state } from "./controllers/read";
 import { put, putMany, remove, set, setMany, update } from "./controllers/write";
 import { clear, refresh } from "./controllers/values";
 import { Clear, Get, GetMany, Put, PutMany, Remove, Set, SetMany, Update } from "./schemas";
 import { SetSDK } from "hollowdb";
+import { LoggerFactory } from "warp-contracts";
 
 export async function makeServer(hollowdb: SetSDK<any>, rocksdbPath: string) {
-  const server = fastify().withTypeProvider<TypeBoxTypeProvider>();
+  const logLevel: LogLevel = "silent";
+  const server = fastify({
+    logger: {
+      level: logLevel,
+      transport: {
+        target: "pino-pretty",
+      },
+    },
+  }).withTypeProvider<TypeBoxTypeProvider>();
+  LoggerFactory.INST.logLevel("debug");
 
   server.decorate("hollowdb", hollowdb);
   server.decorate("contractTxId", hollowdb.contractTxId);
   server.decorate("rocksdbPath", rocksdbPath); // TODO: store RocksDB itself here maybe?
 
-  // TODO: put on listen handler here for refresh
-
   server.get("/state", state);
 
-  server.get("/get", { schema: { params: Get } }, get);
-  server.get("/getRaw", { schema: { params: Get } }, getRaw);
+  server.post("/get", { schema: { body: Get } }, get);
+  server.post("/getRaw", { schema: { body: Get } }, getRaw);
 
   server.post("/getMany", { schema: { body: GetMany } }, getMany);
   server.post("/getManyRaw", { schema: { body: GetMany } }, getManyRaw);
@@ -36,6 +44,13 @@ export async function makeServer(hollowdb: SetSDK<any>, rocksdbPath: string) {
   server.post("/clear", { schema: { body: Clear } }, clear);
 
   server.post("/refresh", refresh);
+
+  server.addHook("onError", (request, reply, error, done) => {
+    if (error.message.startsWith("Contract Error")) {
+      reply.status(400);
+    }
+    done();
+  });
 
   return server;
 }
