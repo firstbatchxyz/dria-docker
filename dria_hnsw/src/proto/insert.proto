@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package insert_buffer;
+
+message MetadataValue {
+    oneof value_type {
+        float float_value = 1;
+        int64 int_value = 2;
+        string string_value = 3;
+        bool bool_value = 4;
+    }
+}
+
+message SingletonVec {
+    repeated float v = 1; // Vector of floats
+    map<string, MetadataValue> map = 2;
+
+}
+
+message BatchVec {
+    repeated SingletonVec s = 1;
+}
+
+
+
+message SingletonStr {
+    string v = 1; // Vector of strings
+    map<string, MetadataValue> map = 2;
+
+}
+
+message BatchStr {
+    repeated SingletonStr s = 1;
+}
