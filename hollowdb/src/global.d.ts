@@ -10,6 +10,8 @@ declare module "fastify" {
   > {
     /** HollowDB decorator. */
     hollowdb: SetSDK<any>;
+    /** Contract ID. */
+    contractTxId: string;
     /** RocksDB Path. */
     rocksdbPath: string;
   }

@@ -16,4 +16,4 @@ export type CacheTypes<C = RedisCache> = {
  * - `sortKey` is accessed as `.sortKeyCacheResult.sortKey`
  * - `value` is accessed as `.sortKeyCacheResult.value`
  */
-export type KeyedSortKeyCacheResult<V> = { sortKeyCacheResult: SortKeyCacheResult<V>; key: string };
+export type KeyedSortKeyCacheResult<V = unknown> = { sortKeyCacheResult: SortKeyCacheResult<V>; key: string };

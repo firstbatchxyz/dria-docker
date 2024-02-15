@@ -7,8 +7,9 @@
   "version": "0.1.0",
   "main": "index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "start": "yarn build && node ./build/index.js"
+    "build": "tsc -p tsconfig.build.json",
+    "start": "yarn build && node ./build/index.js",
+    "test": "jest"
   },
   "dependencies": {
     "@fastify/type-provider-typebox": "^4.0.0",
@@ -23,9 +24,14 @@
     "warp-contracts-redis": "^0.4.2"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.12",
     "@types/levelup": "^5.1.5",
     "@types/node": "^20.11.17",
     "@types/rocksdb": "^3.0.5",
+    "arlocal": "^1.1.65",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
   "packageManager": "yarn@4.1.0",

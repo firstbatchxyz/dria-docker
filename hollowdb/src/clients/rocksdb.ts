@@ -1,17 +1,14 @@
 import Levelup from "levelup";
 import Rocksdb from "rocksdb";
+import { toValueKey } from "../utilities/download";
 
-export class RocksdbClient {
+export class RocksdbClient<V = any> {
   db: ReturnType<typeof Levelup>;
   contractTxId: string;
 
   constructor(path: string, contractTxId: string) {
     this.db = Levelup(Rocksdb(path));
     this.contractTxId = contractTxId;
-  }
-
-  private toValueKey(key: string) {
-    return `${this.contractTxId}.value.${key}`;
   }
 
   async close() {
@@ -27,35 +24,35 @@ export class RocksdbClient {
   }
 
   async get(key: string) {
-    const value = await this.db.get(this.toValueKey(key));
+    const value = await this.db.get(toValueKey(this.contractTxId, key));
     return this.tryParse(value);
   }
 
   async getMany(keys: string[]) {
-    const values = await this.db.getMany(keys.map((k) => this.toValueKey(k)));
+    const values = await this.db.getMany(keys.map((k) => toValueKey(this.contractTxId, k)));
     return values.map((v) => this.tryParse(v));
   }
 
   async set(key: string, value: string) {
-    await this.db.put(this.toValueKey(key), value);
+    await this.db.put(toValueKey(this.contractTxId, key), value);
   }
 
   async setMany(pairs: [string, string][]) {
     await this.db.batch(
       pairs.map(([key, value]) => ({
         type: "put",
-        key: this.toValueKey(key),
+        key: toValueKey(this.contractTxId, key),
         value: value,
       }))
     );
   }
 
   async remove(key: string) {
-    await this.db.del(this.toValueKey(key));
+    await this.db.del(toValueKey(this.contractTxId, key));
   }
 
   async removeMany(keys: string[]) {
-    await this.db.batch(keys.map((key) => ({ type: "del", key: this.toValueKey(key) })));
+    await this.db.batch(keys.map((key) => ({ type: "del", key: toValueKey(this.contractTxId, key) })));
   }
 
   /**
@@ -67,19 +64,20 @@ export class RocksdbClient {
    *
    * @param value a stringified or null value
    * @template V type of the expected value
-   * @returns parsed value, or `null` if it could not be parsed
+   * @returns parsed value or `null`
    */
-  private tryParse(value: Rocksdb.Bytes | null): unknown | null {
+  private tryParse(value: Rocksdb.Bytes | null): V | null {
     let result = null;
 
     if (value) {
       try {
         result = JSON.parse(value.toString());
       } catch (err) {
+        // FIXME: return null here?
         result = value;
       }
     }
 
-    return result;
+    return result as V;
   }
 }

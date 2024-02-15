@@ -32,3 +32,7 @@ export const getManyRaw: RouteHandler<{ Params: GetMany }> = async ({ server, pa
 
   return { values };
 };
+
+export const state: RouteHandler = async ({ server }) => {
+  return await server.hollowdb.getState();
+};
