@@ -6,6 +6,12 @@ It is written in Rust, and several functions respect the machine architecture fo
 
 ## Setup
 
+To run the server, you need to provide a contract ID along with a RocksDB path:
+
+```sh
+CONTRACT_ID=<contract-id> ROCKSDB_PATH="path/do/rocksdb" cargo run
+```
+
 Dria HNSW is available as a container:
 
 ```sh
