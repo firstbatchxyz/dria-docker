@@ -111,7 +111,7 @@ pub async fn fetch(req: HttpRequest, payload: Json<FetchModel>) -> HttpResponse 
     HttpResponse::Ok().json(response)
 }
 
-#[post("/insert_vector")]
+#[post("/insert")]
 pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) -> HttpResponse {
 
     let cid = match env::var("CONTRACT_ID") {

@@ -36,7 +36,7 @@ WALLET=./path/to/wallet.json CONTRACT=contract-txid docker compose up
 When everything is up, you will have access to both Dria and HollowDB on your local network!
 
 - Dria HNSW will be live at `localhost:8080`, see endpoints [here](./dria_hnsw/README.md#endpoints).
-- HollowDB Micro API will be live at `localhost:3030`, see endpoints [here](./micro_api/README.md#endpoints).
+- HollowDB API will be live at `localhost:3030`, see endpoints [here](./hollowdb/README.md#endpoints).
 
 These host ports can also be changed within the [compose file](./compose.yaml), if you have them reserved for other applications.
 

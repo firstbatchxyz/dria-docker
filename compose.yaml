@@ -2,50 +2,46 @@ version: "3.8"
 
 services:
   ### Dria HNSW Rust code ###
-  # depends on Micro API wait-for to complete
   dria-hnsw:
-    build: ./dria_hnsw
-    # image: "firstbatch/dria-hnsw"
+    # build: ./dria_hnsw
+    image: "firstbatch/dria-hnsw"
     environment:
       - ROCKSDB_PATH=/data/${CONTRACT}
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_ID=${CONTRACT}
     volumes:
-      - ${WALLET}:/app/config/wallet.json:ro
       - ${HOME}/.dria/data:/data
     ports:
       - "8080:8080"
     depends_on:
-      micro-api-wait:
+      hollowdb-wait-for:
         condition: service_completed_successfully
 
-  ### Micro API 'wait-for' script ###
-  # will complete when it makes sure Micro has refreshed everything
-  # depends on Micro API to start
-  micro-api-wait:
-    # build: ./micro_api_wait
-    image: "firstbatch/dria-hollowdb-wait-for"
+  ### HollowDBs API 'wait-for' script ###
+  hollowdb-wait-for:
+    build: ./hollowdb_wait
+    # image: "firstbatch/dria-hollowdb-wait-for"
     environment:
-      - TARGET=micro-api:3000
+      - TARGET=hollowdb:3000
     depends_on:
-      - micro-api
+      - hollowdb
 
-  ### Micro API for HollowDB ###
-  # depends on Redis to start
-  micro-api:
-    build: ./micro_api
+  ### Wait for HollowDB ###
+  hollowdb:
+    build: ./hollowdb
     # image: "firstbatch/dria-hollowdb"
     ports:
       - "3000:3000"
     expose:
-      - "3000" # used by Micro API wait-for script
+      - "3000" # used by HollowDB wait-for script
     volumes:
       - ${WALLET}:/app/config/wallet.json:ro
       - ${HOME}/.dria/data:/app/data
     environment:
+      - PORT=3000 # HollowDB port
+      - CONTRACT_TXID=${CONTRACT}
       - ROCKSDB_PATH=/app/data/${CONTRACT}
       - REDIS_URL=redis://default:redispw@redis:6379
-      - CONTRACT_TXID=${CONTRACT}
       - USE_BUNDLR=true # true if your contract uses Bundlr
       - USE_HTX=true # true if your contract stores values as `hash.txid`
       - BUNDLR_FBS=80 # batch size for downloading bundled values from Arweave
@@ -64,5 +60,6 @@ services:
       '--maxmemory', '100mb',
       '--maxmemory-policy', 'allkeys-lru',
       '--appendonly', 'no',
-      '--save', '""'
+      '--dbfilename', '${CONTRACT}.rdb',
+      '--dir', '/tmp'
     ]
