@@ -3,9 +3,6 @@ import type { CacheOptions } from "warp-contracts";
 import type { Redis } from "ioredis";
 import { RedisCache, type RedisOptions } from "warp-contracts-redis";
 import type { CacheTypes } from "../types";
-import config from "../configurations";
-
-export class HollowdbClient {}
 
 /**
  * Utility to create Warp Redis caches.
@@ -18,7 +15,7 @@ export function createCaches(contractTxId: string, client: Redis): CacheTypes<Re
   const defaultCacheOptions: CacheOptions = {
     inMemory: true,
     subLevelSeparator: "|",
-    dbLocation: "redis.micro",
+    dbLocation: "redis.hollowdb",
   };
 
   // if a client exists, use it; otherwise connect via URL

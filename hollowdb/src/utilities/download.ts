@@ -13,9 +13,10 @@ import configurations from "../configurations";
 export async function downloadFromBundlr<V>(txid: string) {
   if (configurations.USE_HTX) {
     const split = txid.split(".");
-    if (split.length !== 2) {
-      console.log("Expected two items from the split.");
-    }
+    // TODO: sanity check here
+    // if (split.length !== 2) {
+    //   console.log("Expected two items from the split.");
+    // }
     txid = split[1];
   }
 

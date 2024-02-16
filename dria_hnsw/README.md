@@ -60,7 +60,7 @@ Response data:
 
 <!-- prettier-ignore -->
 ```ts
-POST /dria/fetch
+POST /fetch
 ```
 
 **Given a list of ids, fetches their corresponding vectors.**
@@ -77,7 +77,7 @@ Response data:
 
 <!-- prettier-ignore -->
 ```ts
-POST /dria/query
+POST /query
 ```
 
 **Given a list of ids, fetches their corresponding vectors.**
@@ -99,7 +99,7 @@ Response data:
 
 <!-- prettier-ignore -->
 ```ts
-POST /dria/insert
+POST /insert
 ```
 
 **Insert a new vector to HNSW.**

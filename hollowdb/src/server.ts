@@ -6,20 +6,34 @@ import { clear, refresh } from "./controllers/values";
 import { Clear, Get, GetMany, Put, PutMany, Remove, Set, SetMany, Update } from "./schemas";
 import { SetSDK } from "hollowdb";
 import { LoggerFactory } from "warp-contracts";
+import configurations from "./configurations";
+import { refreshKeys } from "./utilities/refresh";
 
 export async function makeServer(hollowdb: SetSDK<any>, rocksdbPath: string) {
-  const logLevel: LogLevel = "info";
   const server = fastify({
     logger: {
-      level: logLevel,
+      level: configurations.LOG_LEVEL,
       transport: { target: "pino-pretty" },
     },
   }).withTypeProvider<TypeBoxTypeProvider>();
-  LoggerFactory.INST.logLevel("debug");
+  LoggerFactory.INST.logLevel(configurations.LOG_LEVEL === "silent" ? "none" : configurations.LOG_LEVEL);
 
   server.decorate("hollowdb", hollowdb);
   server.decorate("contractTxId", hollowdb.contractTxId);
   server.decorate("rocksdbPath", rocksdbPath); // TODO: store RocksDB itself here maybe?
+
+  server.addHook("onReady", async function () {
+    // Some async code
+    server.log.info("Waiting for cache to be loaded.");
+
+    const numKeysRefreshed = await refreshKeys(server);
+
+    server.log.info(`Server synced & ready! (${numKeysRefreshed} keys refreshed)`);
+    server.log.info(`> Redis: ${configurations.REDIS_URL}`);
+    server.log.info(`> Wallet: ${configurations.WALLET_PATH}`);
+    server.log.info(`> Download URL: ${configurations.DOWNLOAD.BASE_URL} (timeout ${configurations.DOWNLOAD.TIMEOUT})`);
+    server.log.info(`> Contract: https://sonar.warp.cc/#/app/contract/${server.contractTxId}`);
+  });
 
   server.get("/state", state);
   server.post("/get", { schema: { body: Get } }, get);

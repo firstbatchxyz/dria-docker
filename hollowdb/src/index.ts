@@ -27,6 +27,14 @@ const warp = makeWarp(caches);
 const hollowdb = new SetSDK(wallet, contractTxId, warp);
 
 makeServer(hollowdb, configurations.ROCKSDB_PATH).then(async (server) => {
-  const addr = await server.listen({ port: configurations.PORT, host: "http://localhost" });
-  console.log(`Listening at: ${addr}`);
+  const addr = await server.listen({
+    port: configurations.PORT,
+    // host is set to listen on all interfaces to allow Docker internal network to work
+    // see: https://fastify.dev/docs/latest/Reference/Server/#listentextresolver
+    host: "::",
+    listenTextResolver: (address) => {
+      return `HollowDB is listening at ${address}`;
+    },
+  });
+  server.log.info(`Listening at: ${addr}`);
 });

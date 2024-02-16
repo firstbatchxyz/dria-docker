@@ -41,9 +41,8 @@ describe("crud operations", () => {
     warp = makeLocalWarp(ARWEAVE_PORT, caches);
     const hollowdb = new SetSDK(owner, contractTxId, warp);
     const server = await makeServer(hollowdb, `./test/data/${contractTxId}`);
-    url = await server.listen({ port: 8080 });
-    console.log("hollowdb listening at", url);
-    LoggerFactory.INST.logLevel("error");
+    url = await server.listen({ port: config.PORT });
+    LoggerFactory.INST.logLevel("none");
 
     client = new FetchClient(url);
 

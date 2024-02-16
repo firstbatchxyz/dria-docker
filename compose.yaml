@@ -19,8 +19,8 @@ services:
 
   ### HollowDBs API 'wait-for' script ###
   hollowdb-wait-for:
-    # build: ./hollowdb_wait
-    image: "firstbatch/dria-hollowdb-wait-for"
+    build: ./hollowdb_wait
+    # image: "firstbatch/dria-hollowdb-wait-for"
     environment:
       - TARGET=hollowdb:3000
     depends_on:
@@ -28,8 +28,8 @@ services:
 
   ### Wait for HollowDB ###
   hollowdb:
-    # build: ./hollowdb
-    image: "firstbatch/dria-hollowdb"
+    build: ./hollowdb
+    # image: "firstbatch/dria-hollowdb"
     ports:
       - "3000:3000"
     expose:
@@ -38,9 +38,10 @@ services:
       - ${WALLET}:/app/config/wallet.json:ro
       - ${HOME}/.dria/data:/app/data
     environment:
+      - PORT=3000 # HollowDB port
+      - CONTRACT_TXID=${CONTRACT}
       - ROCKSDB_PATH=/app/data/${CONTRACT}
       - REDIS_URL=redis://default:redispw@redis:6379
-      - CONTRACT_TXID=${CONTRACT}
       - USE_BUNDLR=true # true if your contract uses Bundlr
       - USE_HTX=true # true if your contract stores values as `hash.txid`
       - BUNDLR_FBS=80 # batch size for downloading bundled values from Arweave

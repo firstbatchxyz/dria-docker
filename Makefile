@@ -1,33 +1,58 @@
-.PHONY: build-hollowdb-api run-hollowdb-api build-hollowdb-wait run-hollowdb-wait build-hnsw run-hnsw
 
-## scripts for local development
+######### DRIA HNSW #########
+.PHONY: build-hnsw run-hnsw push-hnsw
+
+build-hnsw:
+	docker build ./dria_hnsw -t dria-hnsw
+
+run-hnsw:
+	docker run dria-hnsw
+
+push-hnsw:
+	docker buildx build \
+	--platform=linux/amd64,linux/arm64,linux/arm ./dria_hnsw \
+	-t firstbatch/dria-hnsw:latest \
+	--builder=dria-builder --push
 
 ######### HOLLOWDB ##########
+.PHONY: build-hollowdb run-hollowdb push-hollowdb
+
 build-hollowdb: 
-	docker build ./hollowdb -t hollowdb-tests
+	docker build ./hollowdb -t dria-hollowdb
 
 run-hollowdb:
 	docker run \
 	-e CONTRACT_TXID=WbcY2a-KfDpk7fsgumUtLC2bu4NQcVzNlXWi13fPMlU \
 	-v ${PWD}/wallet.json:/app/config/wallet.json:ro \
-	hollowdb-tests
+	-e REDIS_URL=redis://default:redispw@localhost:6379 \
+	-p 3030:3030 \
+	dria-hollowdb
 
-build-hollowdb: 
-	docker build ./hollowdb -t hollowdb-tests --push
+push-hollowdb: 
+	docker build ./hollowdb -t firstbatch/dria-hollowdb:latest --push
 
 ####### HOLLOWDB WAIT #######
+.PHONY: build-hollowdb-wait run-hollowdb-wait push-hollowdb-wait
+
 build-hollowdb-wait:
 	docker build ./hollowdb_wait -t hollowdb-wait-for
 
 run-hollowdb-wait:
 	docker run hollowdb-wait-for
 
-run-hollowdb-wait:
-	docker build ./hollowdb_wait -t hollowdb-wait-for --push
+push-hollowdb-wait:
+	docker build ./hollowdb_wait -t firstbatch/dria-hollowdb-wait-for:latest --push
 
-######### DRIA HNSW #########
-build-hnsw:
-	docker build ./dria_hnsw -t hollowdb-wait-for
+########### REDIS ###########
+pull-redis:
+	docker pull redis:alpine
 
-run-hnsw:
-	docker run hollowdb-wait-for
+run-redis:
+	docker run redis:alpine --name dria-redis -p 6379:6379
+
+########## BUILDER ##########
+.PHONY: dria-builder
+
+# see: https://docs.docker.com/build/building/multi-platform/#cross-compilation
+dria-builder:
+	docker buildx create --name dria-builder --bootstrap --use
