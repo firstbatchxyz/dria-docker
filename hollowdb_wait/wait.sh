@@ -13,6 +13,7 @@ while true; do
 
   # check if exit code of curl is 0
   if [ $? -eq 0 ]; then
+    echo ""
     echo "HollowDB API is ready!"
     exit 0
   fi

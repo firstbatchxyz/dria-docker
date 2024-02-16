@@ -5,18 +5,6 @@ import { loremIpsum } from "lorem-ipsum";
 import { JWKInterface, WarpFactory, Warp } from "warp-contracts";
 import { DeployPlugin } from "warp-contracts-plugin-deploy";
 import { CacheTypes } from "../../src/types";
-
-/**
- * Sleeps the system for a given number of milliseconds.
- * @param ms milliseconds
- * @returns a `NodeJS.Timeout`
- */
-export function sleep(ms = 1500) {
-  return new Promise((res) => {
-    setTimeout(res, ms);
-  });
-}
-
 /**
  * Returns the size of a given data in bytes.
  * - To convert to KBs: `size / (1 << 10)`

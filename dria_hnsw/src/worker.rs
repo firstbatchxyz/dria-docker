@@ -1,31 +1,31 @@
-use crate::db::env::Config;
-use crate::hnsw::index::HNSW;
-use crate::middlewares::cache::{NodeCache, PointCache};
-use crate::models::request_models::{FetchModel, InsertBatchModel, QueryModel};
-use crate::responses::responses::CustomResponse;
-use actix_web::web::Json;
-use crate::hnsw::sync_map::SynchronizedNodes;
-use crate::db::rocksdb_client::RocksdbClient;
-use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use std::env;
-use std::time::Instant;
-use actix_web::http::StatusCode;
-use dashmap::DashMap;
-use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
-use crate::proto::index_buffer::{LayerNode, Point};
-use futures_util::future::err;
-use log::{debug, info, trace, warn, error};
-use rayon::prelude::*;
-use rayon::ThreadPool;
-use std::borrow::Borrow;
-use tokio::task;
-use std::sync::Arc;
-use mini_moka::sync::Cache;
 use crate::db::conversions::{
     base64_to_batch_str, base64_to_batch_vec, base64_to_singleton_str, base64_to_singleton_vec,
 };
+use crate::db::env::Config;
+use crate::db::rocksdb_client::RocksdbClient;
+use crate::hnsw::index::HNSW;
+use crate::hnsw::sync_map::SynchronizedNodes;
+use crate::middlewares::cache::{NodeCache, PointCache};
+use crate::models::request_models::{FetchModel, InsertBatchModel, QueryModel};
+use crate::proto::index_buffer::{LayerNode, Point};
+use crate::responses::responses::CustomResponse;
+use actix_web::http::StatusCode;
+use actix_web::web::Json;
+use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse};
+use dashmap::DashMap;
+use futures_util::future::err;
+use log::{debug, error, info, trace, warn};
+use mini_moka::sync::Cache;
+use rayon::prelude::*;
+use rayon::ThreadPool;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use std::borrow::Borrow;
+use std::env;
+use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::Instant;
+use tokio::task;
 
 pub const SINGLE_THREADED_HNSW_BUILD_THRESHOLD: usize = 256;
 
@@ -54,7 +54,7 @@ pub async fn query(req: HttpRequest, payload: Json<QueryModel>) -> HttpResponse 
 
             let node_map = node_cache.get_cache(val.clone()); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
             let point_map = point_cache.get_cache(val.clone());
-            let res = ind.knn_search(&payload.vector, payload.top_n,  node_map, point_map);
+            let res = ind.knn_search(&payload.vector, payload.top_n, node_map, point_map);
 
             let response = CustomResponse {
                 success: true,
@@ -113,7 +113,6 @@ pub async fn fetch(req: HttpRequest, payload: Json<FetchModel>) -> HttpResponse 
 
 #[post("/insert")]
 pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) -> HttpResponse {
-
     let cid = match env::var("CONTRACT_ID") {
         Ok(cid) => cid,
         Err(e) => {
@@ -137,12 +136,12 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
     }
 
     if vectors.len() > 1000 {
-         let response = CustomResponse{
+        let response = CustomResponse {
             success: false,
             data: "Batch size should be smaller than 1000.".to_string(),
-            code: 401
+            code: 401,
         };
-        return HttpResponse::InternalServerError().json(response)
+        return HttpResponse::InternalServerError().json(response);
     }
 
     let node_cache = req
@@ -157,15 +156,9 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
     let cid_clone = cid.clone();
 
     let result = task::spawn_blocking(move || {
-        train_worker(
-            vectors,
-            metadata_batch,
-            node_map,
-            point_map,
-            10_000,
-            cid
-        )
-    }).await;
+        train_worker(vectors, metadata_batch, node_map, point_map, 10_000, cid)
+    })
+    .await;
 
     // Hard reset the node_map before 1_000_000, this is because we don't want RAM to up high
     let node_map = node_cache.get_cache(cid_clone.clone()); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
@@ -200,13 +193,11 @@ fn train_worker(
     node_map: Arc<SynchronizedNodes>,
     point_map: Cache<String, Point>,
     batch_size: usize,
-    contract_id: String
-) -> (String, u16)
-{
+    contract_id: String,
+) -> (String, u16) {
     //let rdb = RocksdbClient::new(contract_id.clone()).unwrap();
 
     let ind = HNSW::new(16, 128, ef_helper(Some(1)), contract_id.clone(), None);
-
 
     let mut ds = 0;
     let nl = ind.db.get_num_layers();
@@ -267,7 +258,7 @@ fn train_worker(
                 num_layers.clone(),
                 epa.clone(),
             )
-                .expect("Error inserting");
+            .expect("Error inserting");
         }
 
         if SINGLE_THREADED_HNSW_BUILD_THRESHOLD < (vectors.len() + ds) {
@@ -284,7 +275,7 @@ fn train_worker(
                         )
                     })
             })
-                .expect("Error inserting");
+            .expect("Error inserting");
         }
     } else {
         pool.install(|| {
@@ -298,7 +289,7 @@ fn train_worker(
                 )
             })
         })
-            .expect("Error inserting");
+        .expect("Error inserting");
     }
 
     //replicate neighbors
@@ -315,7 +306,6 @@ fn train_worker(
     let batch_size: usize = batch_size;
 
     for chunk in values.chunks(batch_size) {
-
         let r1 = ind.db.upsert_neighbors(chunk.to_vec());
         if r1.is_err() {
             error!("{}", r1.err().unwrap());
