@@ -1,12 +1,17 @@
 import Levelup from "levelup";
 import Rocksdb from "rocksdb";
 import { toValueKey } from "../utilities/download";
+import { existsSync, mkdirSync } from "fs";
 
 export class RocksdbClient<V = any> {
   db: ReturnType<typeof Levelup>;
   contractTxId: string;
 
   constructor(path: string, contractTxId: string) {
+    if (!existsSync(path)) {
+      mkdirSync(path, { recursive: true });
+    }
+
     this.db = Levelup(Rocksdb(path));
     // FIXME: if the directory does not exist, it may giving an error...
     this.contractTxId = contractTxId;

@@ -133,7 +133,7 @@ describe("crud operations", () => {
       expect(result.f).toBe(value.f);
     });
 
-    it.skip("should do a raw GET many", async () => {
+    it("should do a raw GET many", async () => {
       const getManyRawResponse = await client.post<GetMany>("/getManyRaw", {
         keys: KEY_VALUES.map((kv) => kv.key),
       });
@@ -147,7 +147,7 @@ describe("crud operations", () => {
       }
     });
 
-    it.skip("should refresh a newly PUT key", async () => {
+    it("should refresh a newly PUT key", async () => {
       const { key, value } = randomKeyValue();
       const putResponse = await client.post<Put>("/put", { key, value });
       expect(putResponse.status).toBe(200);
@@ -158,25 +158,24 @@ describe("crud operations", () => {
       expect(await refreshResponse.text()).toBe("1");
     });
 
-    it.skip("should refresh with 0 keys when no additions are made", async () => {
-      // we expect 0 keys as nothing has changed since the last refresh
+    it("should refresh with 0 keys when no additions are made", async () => {
       const refreshResponse = await client.post("/refresh");
       expect(refreshResponse.status).toBe(200);
       expect(await refreshResponse.text()).toBe("0");
     });
 
-    it.skip("should clear all keys", async () => {
+    it("should clear all keys", async () => {
       // we expect 0 keys as nothing has changed since the last refresh
-      const clearResponse = await client.post("clear");
+      const clearResponse = await client.post("/clear");
       expect(clearResponse.status).toBe(200);
 
-      // const getManyRawResponse = await client.post<GetMany>("getManyRaw", {
-      //   keys: KEY_VALUES.map((kv) => kv.key),
-      // });
-      // expect(getManyRawResponse.status).toBe(200);
-      // const body = await getManyRawResponse.json();
+      const getManyRawResponse = await client.post<GetMany>("/getManyRaw", {
+        keys: KEY_VALUES.map((kv) => kv.key),
+      });
+      expect(getManyRawResponse.status).toBe(200);
+      const body = await getManyRawResponse.json();
 
-      // (body.values as (typeof KEY_VALUES)[0]["value"][]).forEach((val) => expect(val).toBe(null));
+      (body.values as (typeof KEY_VALUES)[0]["value"][]).forEach((val) => expect(val).toBe(null));
     });
   });
 

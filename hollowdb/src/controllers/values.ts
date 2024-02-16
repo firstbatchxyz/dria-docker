@@ -46,9 +46,7 @@ export const refresh: RouteHandler = async ({ server }, reply) => {
   }
 
   const rocksdb = new RocksdbClient(server.rocksdbPath, server.contractTxId);
-  console.log("Opening RocksDB");
   await rocksdb.open();
-  console.log("Done");
 
   const refreshValues = async (results: KeyedSortKeyCacheResult[], values?: unknown[]) => {
     if (values && values.length !== results.length) {
@@ -64,7 +62,7 @@ export const refresh: RouteHandler = async ({ server }, reply) => {
           : JSON.stringify(values[i])
         : // use own value
           JSON.stringify(cachedValue);
-      return [toValueKey(server.contractTxId, key), val] as [string, string];
+      return [key, val] as [string, string];
     });
 
     // write values to disk (as they may be too much for the memory)
@@ -132,5 +130,5 @@ export const clear: RouteHandler<{ Body: Clear }> = async ({ server, body }, rep
   await rocksdb.removeMany(keys);
   await rocksdb.close();
 
-  return reply.code(200);
+  return reply.send();
 };
