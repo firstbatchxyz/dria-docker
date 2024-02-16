@@ -11,23 +11,23 @@ use std::time::Duration;
 use parking_lot::{Mutex, RwLock, RwLockWriteGuard};
 
 pub struct SynchronizedNodes {
-    pub map: Cache<String, LayerNode>, //Arc<DashMap<String, LayerNode>>,
+    pub map: Arc<DashMap<String, LayerNode>>,
     pub lock_map: Arc<DashMap<String, RwLock<()>>>,
     wait_map: Mutex<HashMap<String, (Sender<()>, Receiver<()>)>>,
 }
 
 impl SynchronizedNodes {
     pub fn new() -> Self {
-        let cache = Cache::builder()
-            //if a key is not used (get or insert) for 2 hour, expire it
-            .time_to_idle(Duration::from_secs(4 * 60 * 60))
-            .max_capacity(1_000_000)
-            .build();
-
         SynchronizedNodes {
-            map: cache, //Arc::new(DashMap::with_capacity(1_000_000)), //this makes to 50mb of memory for 32 mmax0
+            map: Arc::new(DashMap::with_capacity(1_000_000)), //this makes to 50mb of memory for 32 mmax0
             lock_map: Arc::new(DashMap::new()),
             wait_map: Mutex::new(HashMap::new()),
+        }
+    }
+
+    pub fn reset(&self) {
+        if self.map.len() > 995_000 { // it could be 999_000 but to be safe :D
+            self.map.clear();
         }
     }
 
