@@ -15,6 +15,8 @@ use std::num::FpCategory::Nan;
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::sync::Arc;
 
+use simsimd::SimSIMD;
+
 use rand::{thread_rng, Rng, SeedableRng};
 
 use crate::proto::index_buffer::{LayerNode, Point};
@@ -24,7 +26,6 @@ use prost_types::Any; // For handling the Any type
 use crate::errors::errors::DeserializeError;
 use crate::hnsw::utils::{create_max_heap, create_min_heap, IntoHeap, IntoMap, Numeric};
 
-use crate::distance::metric::{Metric, MetricCosine, MetricL1, MetricL2};
 use crate::hnsw::scalar::ScalarQuantizer;
 use rayon::prelude::*;
 use serde_json::{json, Value};
@@ -50,7 +51,7 @@ pub struct HNSW {
     pub ef: usize,
     pub db: RocksdbClient,
     quantizer: ScalarQuantizer,
-    metric: Option<String>, //pub metric: Metric,
+    metric: Option<String>,
 }
 
 impl HNSW {
@@ -76,7 +77,7 @@ impl HNSW {
             ef,
             db,
             quantizer: sq,
-            metric, //metric: Metric::Angular,
+            metric,
         }
     }
 
@@ -99,12 +100,17 @@ impl HNSW {
     }
 
     fn distance(&self, x: &[f32], y: &[f32], dist: &Option<String>) -> f32 {
-        match dist.as_ref().map(String::as_str) {
-            Some("l2") => unsafe { MetricL2::compare(x, y) },
-            Some("l1") => unsafe { MetricL1::compare(x, y) },
-            Some("cosine") | None => unsafe { 1.0 - MetricCosine::compare(x, y) },
+
+        let dist = match dist.as_ref().map(String::as_str) {
+            Some("sqeuclidean") => SimSIMD::sqeuclidean(x, y),
+            Some("inner") => SimSIMD::inner(x, y),
+            Some("cosine") | None => SimSIMD::cosine(x, y),
             _ => panic!("Unsupported distance metric"),
+        };
+        if dist.is_none() {
+            println!("Error in distance"); //make the error propagate
         }
+        dist.unwrap()
     }
 
     fn get_points_w_memory(

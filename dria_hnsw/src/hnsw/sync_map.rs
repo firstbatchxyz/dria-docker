@@ -6,27 +6,30 @@ use std::collections::HashMap;
 use std::sync::Arc;
 //use tokio::sync::{Mutex, RwLock, RwLockWriteGuard};
 use mini_moka::sync::Cache;
+use parking_lot::{Mutex, RwLock, RwLockWriteGuard};
 use std::time::Duration;
 
-use parking_lot::{Mutex, RwLock, RwLockWriteGuard};
+//static ref RESET_SIZE =  120_000;
 
 pub struct SynchronizedNodes {
-    pub map: Arc<DashMap<String, LayerNode>>,
+    pub map: Arc<DashMap<String, LayerNode>>, //Cache<String, LayerNode>,  //Arc<DashMap<String, LayerNode>>,
     pub lock_map: Arc<DashMap<String, RwLock<()>>>,
-    wait_map: Mutex<HashMap<String, (Sender<()>, Receiver<()>)>>,
+    wait_map: Mutex<HashMap<String, (Sender<()>, Receiver<()>)>>
 }
 
 impl SynchronizedNodes {
     pub fn new() -> Self {
         SynchronizedNodes {
-            map: Arc::new(DashMap::with_capacity(1_000_000)), //this makes to 50mb of memory for 32 mmax0
+            map: Arc::new(DashMap::new()), //Arc::new(DashMap::new()),cache
             lock_map: Arc::new(DashMap::new()),
             wait_map: Mutex::new(HashMap::new()),
         }
     }
 
-    pub fn reset(&self) {
-        if self.map.len() > 995_000 { // it could be 999_000 but to be safe :D
+
+    pub fn reset(&self)
+    {
+        if self.map.len() > 120_000 {
             self.map.clear();
         }
     }
@@ -34,26 +37,19 @@ impl SynchronizedNodes {
     pub fn insert_and_notify(&self, node: &LayerNode) {
         let key = format!("{}:{}", node.level, node.idx);
 
-        let node_lock = self
-            .lock_map
-            .entry(key.clone())
-            .or_insert_with(|| RwLock::new(()));
-        let _write_guard = node_lock.write();
+        {
+            let node_lock = self
+                .lock_map
+                .entry(key.clone())
+                .or_insert_with(|| RwLock::new(()));
 
-        // Lock guard on wait_map for atomic check-and-notify
-        //let mut wait_map_guard = self.wait_map.lock().unwrap();
-
-        // Insert or update the node in the DashMap
-        self.map.insert(key.clone(), node.clone());
-        drop(_write_guard);
-        // Notify all waiting threads registered for this key
-        let mut wait_map_guard = self.wait_map.lock();
-        if let Some((sender, _receiver)) = wait_map_guard.remove(&key) {
-            // You can drop the lock here since the channel will be removed
-            // This avoid deadlocks if the receiving end tries to acquire the same lock.
-            drop(wait_map_guard);
-            let _ = sender.send(()); // It's safe to ignore the send result
+            let _write_guard = node_lock.write();
+            // Insert or update the node in the DashMap
+            self.map.insert(key.clone(), node.clone());
         }
+
+        // Notify all waiting threads registered for this key
+        self.notify(&key);
     }
 
     pub fn insert_batch_and_notify(&self, nodes: Vec<LayerNode>) {
@@ -63,43 +59,56 @@ impl SynchronizedNodes {
         for node in nodes.iter() {
             let key = format!("{}:{}", node.level, node.idx);
 
-            let node_lock = self
-                .lock_map
-                .entry(key.clone())
-                .or_insert_with(|| RwLock::new(()));
-            let _write_guard = node_lock.write(); // Lock for writing
+            {
+                let node_lock = self
+                    .lock_map
+                    .entry(key.clone())
+                    .or_insert_with(|| RwLock::new(()));
+                let _write_guard = node_lock.write(); // Lock for writing
+                self.map.insert(key.clone(), node.clone());
+            }
 
-            self.map.insert(key.clone(), node.clone());
             keys_to_notify.insert(key);
-            drop(_write_guard);
+            //drop(_write_guard);
         }
 
-        // Now, after all nodes have been processed, issue the notifications.
-        let mut wait_map_guard = self.wait_map.lock();
         for key in keys_to_notify {
-            if let Some((sender, reciever)) = wait_map_guard.get(&key) {
-                let _ = sender.send(()); // It's safe to ignore the send result
-            }
+            self.notify(&key);
         }
     }
 
     pub fn get_or_wait(&self, key: &str) -> LayerNode {
         loop {
+            // Register for notification before checking if a node is being inserted
+
             if let Some(value) = self.map.get(&key.to_string()) {
-                return value.clone();
+                return value.value().clone();
             }
 
-            // Register for notification before checking if a node is being inserted
             let receiver = self.register_for_notification(key);
 
-            receiver.recv().unwrap(); // Block the thread until notification is received
+            // A secondary check
+            if let Some(value) = self.map.get(&key.to_string()) {
+                println!("Second check grabbed key: {}", key);
+                return value.value().clone();
+            }
+
+            //receiver.recv().unwrap(); // Block the thread until notification is received
+            match receiver.recv_timeout(Duration::from_millis(500)) {
+                Ok(_) => { /* Handle reception */ }
+                Err(e) => {
+                    // Handle timeout or other errors
+                    eprintln!("Error or timeout waiting for message: {:?}", e);
+                    continue; // or handle differently
+                }
+            }
         }
     }
 
     pub fn get_or_wait_opt(&self, key: &str) -> Option<LayerNode> {
         loop {
             if let Some(value) = self.map.get(&key.to_string()) {
-                return Some(value.clone());
+                return Some(value.value().clone());
             }
 
             // Check if this key is expected to be updated soon
@@ -151,4 +160,18 @@ impl SynchronizedNodes {
             let _ = sender.send(()); // It's safe to ignore the send result
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::conversions::{base64_to_node, node_to_base64};
+    use crate::proto::index_buffer::LayerNode;
+    use crate::proto::index_buffer::Point;
+    use std::sync::Arc;
+    use std::thread;
+    use std::time::Duration;
+
+    #[test]
+    fn test_synchronized_nodes() {}
 }

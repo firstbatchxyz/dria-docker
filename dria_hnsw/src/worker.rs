@@ -111,7 +111,7 @@ pub async fn fetch(req: HttpRequest, payload: Json<FetchModel>) -> HttpResponse 
     HttpResponse::Ok().json(response)
 }
 
-#[post("/insert")]
+#[post("/insert_vector")]
 pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) -> HttpResponse {
     let cid = match env::var("CONTRACT_ID") {
         Ok(cid) => cid,
@@ -154,25 +154,19 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
     let node_map = node_cache.get_cache(cid.clone()); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
     let point_map = point_cache.get_cache(cid.clone()); //Arc<DashMap<String, Point>> = Arc::new(DashMap::new());
     let cid_clone = cid.clone();
-
     let result = task::spawn_blocking(move || {
-        train_worker(vectors, metadata_batch, node_map, point_map, 10_000, cid)
-    })
-    .await;
+        train_worker(
+            vectors,
+            metadata_batch,
+            node_map,
+            point_map,
+            10_000,
+            cid.clone()
+        )
+    }).await;
 
-    // Hard reset the node_map before 1_000_000, this is because we don't want RAM to up high
-    let node_map = node_cache.get_cache(cid_clone.clone()); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
+    let node_map = node_cache.get_cache(cid_clone); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
     node_map.reset();
-
-    let (message, code) = result.expect("Error getting result");
-    if code != 200 {
-        let response = CustomResponse {
-            success: false,
-            data: message,
-            code: code as u32,
-        };
-        return HttpResponse::InternalServerError().json(response);
-    }
 
     let response = CustomResponse {
         success: true,

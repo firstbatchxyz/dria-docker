@@ -701,6 +701,7 @@ dependencies = [
  "serde",
  "serde_json",
  "simple_logger",
+ "simsimd",
  "tdigest",
  "tokio",
  "url",
@@ -1913,6 +1914,15 @@ dependencies = [
  "log",
  "time",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "simsimd"
+version = "3.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdb478b1bf2945bc29c68236f447451dd499075533b98e3a1395d6b28779ce6b"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
