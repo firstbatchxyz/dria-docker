@@ -10,12 +10,6 @@ pub struct InsertModel {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct InsertBatchModel_ {
-    pub data: String,
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct InsertBatchModel {
     pub data: Vec<InsertModel>,
 }
@@ -29,6 +23,7 @@ pub struct FetchModel {
 pub struct QueryModel {
     pub vector: Vec<f32>,
     pub top_n: usize,
+    pub query: Option<String>,
     pub level: Option<usize>,
 }
 
@@ -36,7 +31,7 @@ impl QueryModel {
     pub fn new(
         vector: Vec<f32>,
         top_n: usize,
-        contract_id: String,
+        query: Option<String>,
         level: Option<usize>,
     ) -> Result<Self, ValidationError> {
         Self::validate_top_n(top_n)?;
@@ -45,6 +40,7 @@ impl QueryModel {
         Ok(QueryModel {
             vector,
             top_n,
+            query,
             level,
         })
     }

@@ -6,3 +6,4 @@ pub mod models;
 pub mod proto;
 pub mod responses;
 pub mod worker;
+pub mod filter;

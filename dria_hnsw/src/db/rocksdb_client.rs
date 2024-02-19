@@ -86,7 +86,7 @@ impl RocksdbClient {
     }
 
     pub fn upsert_neighbor(&self, node: LayerNode) -> Result<(), DeserializeError> {
-        let key = format!("{}:{}", node.level, node.idx);
+        let key = format!("{}.value.{}:{}", self.tag, node.level, node.idx);
 
         let node_str = node_to_base64(&node);
         self.set(key, node_str)?;
@@ -98,7 +98,7 @@ impl RocksdbClient {
 
         let mut batch = WriteBatch::default();
         for node in nodes {
-            let key = format!("{}:{}", node.level, node.idx);
+            let key = format!("{}.value.{}:{}", self.tag, node.level, node.idx);
             let node_str = node_to_base64(&node);
             batch.put(key.as_bytes(), node_str.as_bytes());
         }
@@ -254,7 +254,7 @@ impl RocksdbClient {
         let mut batch = WriteBatch::default();
 
         for (i, m) in metadata.iter().enumerate() {
-            let key = format!("m:{}", idx + i);
+            let key = format!("{}.value.m:{}", self.tag, idx + i);
             let metadata_str = serde_json::to_vec(&m).unwrap();
             batch.put(key.as_bytes(), metadata_str);
         }

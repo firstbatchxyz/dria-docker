@@ -27,6 +27,9 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::task;
 
+use probly_search::Index;
+use crate::filter::text_based::{create_index_from_docs, Wiki};
+
 pub const SINGLE_THREADED_HNSW_BUILD_THRESHOLD: usize = 256;
 
 #[get("/health")]
@@ -55,6 +58,17 @@ pub async fn query(req: HttpRequest, payload: Json<QueryModel>) -> HttpResponse 
             let node_map = node_cache.get_cache(val.clone()); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
             let point_map = point_cache.get_cache(val.clone());
             let res = ind.knn_search(&payload.vector, payload.top_n, node_map, point_map);
+
+            if payload.query.is_some(){
+                let mut index = Index::<usize>::new(2);
+                let results = create_index_from_docs(&mut index, &payload.query.clone().unwrap(),res.clone());
+                let response = CustomResponse {
+                    success: true,
+                    data: json!(results),
+                    code: 200,
+                };
+                return HttpResponse::Ok().json(response)
+            }
 
             let response = CustomResponse {
                 success: true,
@@ -125,11 +139,11 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
         }
     };
 
-    let data = &payload.data;
+    //let data = payload.data;
 
     let mut vectors = Vec::new();
     let mut metadata_batch = Vec::new();
-    for d in data.iter() {
+    for d in  payload.data.iter() {
         vectors.push(d.vector.clone());
         metadata_batch.push(d.metadata.clone());
     }
