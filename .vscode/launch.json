@@ -14,8 +14,8 @@
       "stopOnEntry": false,
       "sourceLanguages": ["rust"],
       "env": {
-        "ROCKSDB_PATH": "~/.dria/data/debugme",
-        "CONTRACT_ID": "debugme"
+        "ROCKSDB_PATH": "/Users/erhant/.dria/data/wikipedia.20220301.simple",
+        "CONTRACT_ID": "wikipedia.20220301.simple"
       }
     }
   ]
