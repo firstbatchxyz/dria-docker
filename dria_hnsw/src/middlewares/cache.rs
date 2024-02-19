@@ -1,5 +1,5 @@
 use crate::hnsw::sync_map::SynchronizedNodes;
-use crate::proto::index_buffer::Point;
+use crate::proto::index_buffer::{Point, PointQuant};
 use dashmap::DashMap;
 use std::sync::Arc;
 
@@ -8,7 +8,6 @@ use mini_moka::sync::Cache;
 use std::time::Duration;
 
 pub struct NodeCache {
-    //pub caches: Arc<DashMap<String, Arc<SynchronizedNodes>>>
     pub caches: Cache<String, Arc<SynchronizedNodes>>,
 }
 
@@ -63,7 +62,7 @@ impl PointCache {
             //let new_cache = Arc::new(DashMap::new());
             let new_cache = Cache::builder()
                 //if a key is not used (get or insert) for 2 hour, expire it
-                .time_to_live(Duration::from_secs(1 * 60 * 60))
+                //.time_to_live(Duration::from_secs(1 * 60 * 60))
                 .max_capacity(200_000) // around 2060MB for 1536 dim vectors
                 .build();
             my_cache.insert(key.to_string(), new_cache.clone());
