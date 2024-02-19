@@ -23,7 +23,7 @@ export async function refreshKeys(server: FastifyInstance): Promise<number> {
 
   // return early if there are no keys
   if (keys.length === 0) {
-    server.log.info(`No keys found to refresh.`);
+    server.log.info("All keys are up-to-date.");
     return 0;
   }
 
@@ -81,12 +81,11 @@ export async function refreshKeys(server: FastifyInstance): Promise<number> {
   };
 
   // update values in Redis
-  let progress: [number, number] = [0, 0];
+
   const { USE_BUNDLR, BUNDLR_FBS } = configurations;
   if (USE_BUNDLR) {
-    // doing a Promise.all over all keys here can be problematic, causes timeouts and stuff
-    // (see relevant issue here: https://github.com/firstbatchxyz/hollowdb-dockerized/issues/7)
-    // so instead we do these fetches batch-by-batch
+    const progress: [number, number] = [0, 0];
+
     server.log.info("Starting batched Bundlr downloads:");
     progress[1] = staleResults.length;
     for (let b = 0; b < staleResults.length; b += BUNDLR_FBS) {
@@ -94,13 +93,16 @@ export async function refreshKeys(server: FastifyInstance): Promise<number> {
 
       progress[0] = Math.min(b + BUNDLR_FBS, staleResults.length);
 
-      const msg = `\t${progressString(progress[0], progress[1])} values downloaded`;
-      console.time(msg);
-      // TODO: add error catch & try here, expecting AxiosError
+      const startTime = performance.now();
       const batchValues = await Promise.all(
-        batchResults.map((result) => downloadFromBundlr<{ data: any }>(result.sortKeyCacheResult.cachedValue as string))
+        batchResults.map((result) =>
+          downloadFromBundlr<{ data: any }>(result.sortKeyCacheResult.cachedValue as string, server.log)
+        )
       );
-      console.timeEnd(msg);
+      const endTime = performance.now();
+      server.log.info(
+        `${progressString(progress[0], progress[1])} values downloaded (${(endTime - startTime).toFixed(2)} ms)`
+      );
 
       await refreshValues(
         batchResults,

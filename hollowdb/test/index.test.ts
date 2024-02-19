@@ -1,5 +1,5 @@
 import ArLocal from "arlocal";
-import { ArWallet, LoggerFactory } from "warp-contracts";
+import { ArWallet, LoggerFactory, sleep } from "warp-contracts";
 
 import { Redis } from "ioredis";
 import { SetSDK } from "hollowdb";
@@ -7,9 +7,10 @@ import { SetSDK } from "hollowdb";
 import { makeServer } from "../src/server";
 import config from "../src/configurations";
 import { createCaches } from "../src/clients/hollowdb";
-import { deploy, FetchClient, sleep, randomKeyValue, makeLocalWarp } from "./util";
+import { deploy, FetchClient, randomKeyValue, makeLocalWarp } from "./util";
 import { Get, GetMany, Put, PutMany, Update } from "../src/schemas";
 import { randomBytes } from "crypto";
+import { rmSync } from "fs";
 
 describe("crud operations", () => {
   let arlocal: ArLocal;
@@ -17,6 +18,7 @@ describe("crud operations", () => {
   let client: FetchClient;
   let url: string;
 
+  const DATA_PATH = "./test/data";
   const ARWEAVE_PORT = 3169;
   const VALUE = randomBytes(16).toString("hex");
   const NEW_VALUE = randomBytes(16).toString("hex");
@@ -40,7 +42,7 @@ describe("crud operations", () => {
     caches = createCaches(contractTxId, redisClient);
     warp = makeLocalWarp(ARWEAVE_PORT, caches);
     const hollowdb = new SetSDK(owner, contractTxId, warp);
-    const server = await makeServer(hollowdb, `./test/data/${contractTxId}`);
+    const server = await makeServer(hollowdb, `${DATA_PATH}/${contractTxId}`);
     url = await server.listen({ port: config.PORT });
     LoggerFactory.INST.logLevel("none");
 
@@ -182,6 +184,7 @@ describe("crud operations", () => {
     console.log("waiting a bit before closing...");
     await sleep(1500);
 
+    rmSync(DATA_PATH, { recursive: true });
     await arlocal.stop();
     await redisClient.quit();
   });

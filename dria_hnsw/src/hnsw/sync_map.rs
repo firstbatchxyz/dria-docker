@@ -19,13 +19,13 @@ pub struct SynchronizedNodes {
 
 impl SynchronizedNodes {
     pub fn new() -> Self {
-
         SynchronizedNodes {
             map: Arc::new(DashMap::new()), //Arc::new(DashMap::new()),cache
             lock_map: Arc::new(DashMap::new()),
             wait_map: Mutex::new(HashMap::new()),
         }
     }
+
 
     pub fn reset(&self)
     {

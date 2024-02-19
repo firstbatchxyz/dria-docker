@@ -1,24 +1,18 @@
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
-use dria_hnsw::worker::{fetch, get_health_status, query};
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use dria_hnsw::middlewares::cache::{NodeCache, PointCache};
+use dria_hnsw::worker::{fetch, get_health_status, insert_vector, query};
 
 pub fn config(conf: &mut web::ServiceConfig) {
     conf.service(get_health_status);
     conf.service(query);
     conf.service(fetch);
+    conf.service(insert_vector);
 }
-
-
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-
-
-
     let node_cache = web::Data::new(NodeCache::new());
     let point_cache = web::Data::new(PointCache::new());
 

@@ -1,8 +1,0 @@
-test
-config
-.vscode
-.github
-.env.example
-.gitignore
-.mocharc.json
-node_modules

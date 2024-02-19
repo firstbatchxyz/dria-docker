@@ -12,11 +12,15 @@ import { refreshKeys } from "./utilities/refresh";
 export async function makeServer(hollowdb: SetSDK<any>, rocksdbPath: string) {
   const server = fastify({
     logger: {
-      level: configurations.LOG_LEVEL,
+      level: configurations.LOG.LEVEL,
       transport: { target: "pino-pretty" },
+      redact: {
+        paths: configurations.LOG.REDACT,
+        remove: true,
+      },
     },
   }).withTypeProvider<TypeBoxTypeProvider>();
-  LoggerFactory.INST.logLevel(configurations.LOG_LEVEL === "silent" ? "none" : configurations.LOG_LEVEL);
+  LoggerFactory.INST.logLevel(configurations.LOG.LEVEL === "silent" ? "none" : configurations.LOG.LEVEL);
 
   server.decorate("hollowdb", hollowdb);
   server.decorate("contractTxId", hollowdb.contractTxId);
