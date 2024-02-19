@@ -18,7 +18,7 @@ async fn main() -> std::io::Result<()> {
 
     let factory = move || {
         App::new()
-            //.wrap(ExternalClient)
+            .app_data(web::JsonConfig::default().limit(152428800))
             .app_data(node_cache.clone())
             .app_data(point_cache.clone())
             .configure(config)

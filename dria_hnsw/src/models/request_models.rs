@@ -6,12 +6,18 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InsertModel {
     pub vector: Vec<f32>,
-    pub metadata: Option<Value>,
+    pub metadata: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct InsertBatchModel {
+pub struct InsertBatchModel_ {
     pub data: String,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InsertBatchModel {
+    pub data: Vec<InsertModel>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

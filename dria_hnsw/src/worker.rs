@@ -125,20 +125,19 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
         }
     };
 
-    let data = base64_to_batch_vec(&payload.data);
-    let cfg = Config::new();
+    let data = &payload.data;
+
     let mut vectors = Vec::new();
     let mut metadata_batch = Vec::new();
-    for d in data.s.iter() {
-        let metadata = json!(d.map.clone());
-        vectors.push(d.v.clone()); //this should not be clone
-        metadata_batch.push(metadata);
+    for d in data.iter() {
+        vectors.push(d.vector.clone());
+        metadata_batch.push(d.metadata.clone());
     }
 
-    if vectors.len() > 1000 {
+    if vectors.len() > 2500 {
         let response = CustomResponse {
             success: false,
-            data: "Batch size should be smaller than 1000.".to_string(),
+            data: "Batch size should be smaller than 2500.".to_string(),
             code: 401,
         };
         return HttpResponse::InternalServerError().json(response);
@@ -168,12 +167,21 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
     let node_map = node_cache.get_cache(cid_clone); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
     node_map.reset();
 
-    let response = CustomResponse {
+    let (res, code) = result.expect("Error getting result");
+
+    if code != 200 {
+        return HttpResponse::InternalServerError().json(CustomResponse {
+            success: false,
+            data: res,
+            code: code as u32,
+        });
+    }
+    return HttpResponse::Ok().json(CustomResponse {
         success: true,
         data: "Values are successfully added to index.".to_string(),
         code: 200,
-    };
-    HttpResponse::Ok().json(response)
+    });
+
 }
 
 fn ef_helper(ef: Option<usize>) -> usize {
@@ -189,7 +197,6 @@ fn train_worker(
     batch_size: usize,
     contract_id: String,
 ) -> (String, u16) {
-    //let rdb = RocksdbClient::new(contract_id.clone()).unwrap();
 
     let ind = HNSW::new(16, 128, ef_helper(Some(1)), contract_id.clone(), None);
 
