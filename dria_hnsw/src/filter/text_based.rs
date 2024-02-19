@@ -33,7 +33,12 @@ pub fn create_index_from_docs(
     let mut iter = 0;
 
     for (_, value) in metadata.iter().enumerate() {
-        println!("{:?}", value);
+
+        let score = value["score"].as_f64().unwrap();
+        if score < 0.75 {
+            continue;
+        }
+
         let text = value["metadata"]["text"].as_str();
         let title = value["metadata"]["title"].as_str();
         let id = value["metadata"]["id"].as_str().unwrap();
@@ -56,6 +61,10 @@ pub fn create_index_from_docs(
             iter += 1;
         }
     }
+    if wikis.len() == 0{
+        return metadata;
+    }
+
     for wiki in wikis.iter() {
         index.add_document(
             &[title_extract, text_extract],
@@ -65,7 +74,7 @@ pub fn create_index_from_docs(
         );
     }
 
-    let results = index.query(query, &mut bm25::new(), tokenizer, &vec![1., 1.]);
+    let results = index.query(query, &mut zero_to_one::new(), tokenizer, &vec![1., 1.]);
     let mut results_as_wiki = vec![];
     for res in results.iter() {
         let val = json!({"id": ids[res.key], "metadata": query_results[res.key].clone(), "score": res.score});

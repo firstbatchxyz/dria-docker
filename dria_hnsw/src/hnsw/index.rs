@@ -466,28 +466,22 @@ impl HNSW {
         let ep_index = self.db.get_ep().expect("") as u32;
         let num_layers = self.db.get_num_layers().expect("Error getting num_layers");
 
-        let st = tokio::time::Instant::now();
         let points = self.get_points_w_memory(&vec![ep_index], point_map.clone());
-        println!("get_points_w_memory: {:?}", st.elapsed().as_millis());
         let point = points.first().unwrap();
         let dist = self.distance(&q, &point.v, &self.metric);
         let mut ep = HashMap::from([(ep_index, dist)]);
 
-        let st = tokio::time::Instant::now();
         for l_c in (1..=num_layers - 1).rev() {
             W = self
                 .search_layer(&q, ep, 1, l_c, node_map.clone(), point_map.clone())
                 .expect("Error searching layer");
             ep = W;
         }
-        println!("search 1: {:?}", st.elapsed().as_millis());
-
-        let st = tokio::time::Instant::now();
+        
         let ep_ = self
             .search_layer(q, ep, self.ef, 0, node_map.clone(), point_map.clone())
             .expect("Error searching layer");
 
-        println!("search 2: {:?}", st.elapsed().as_millis());
         let mut heap = ep_.into_minheap();
         let mut sorted_vec = Vec::new();
         while !heap.is_empty() && sorted_vec.len() < K {
