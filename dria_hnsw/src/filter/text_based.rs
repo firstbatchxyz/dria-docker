@@ -33,12 +33,6 @@ pub fn create_index_from_docs(
     let mut iter = 0;
 
     for (_, value) in metadata.iter().enumerate() {
-
-        let score = value["score"].as_f64().unwrap();
-        if score < 0.75 {
-            continue;
-        }
-
         let text = value["metadata"]["text"].as_str();
         let title = value["metadata"]["title"].as_str();
         let id = value["metadata"]["id"].as_str().unwrap();
@@ -61,7 +55,7 @@ pub fn create_index_from_docs(
             iter += 1;
         }
     }
-    if wikis.len() == 0{
+    if wikis.len() == 0 {
         return metadata;
     }
 

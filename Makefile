@@ -6,7 +6,11 @@ build-hnsw:
 	docker build ./dria_hnsw -t dria-hnsw
 
 run-hnsw:
-	docker run dria-hnsw
+	docker run \
+	-e CONTRACT_ID=WbcY2a-KfDpk7fsgumUtLC2bu4NQcVzNlXWi13fPMlU \
+	-e REDIS_URL=redis://default:redispw@localhost:6379 \
+	-p 8080:8080 \
+	dria-hnsw
 
 push-hnsw:
 	docker buildx build \
@@ -22,8 +26,7 @@ build-hollowdb:
 
 run-hollowdb:
 	docker run \
-	-e CONTRACT_TXID=WbcY2a-KfDpk7fsgumUtLC2bu4NQcVzNlXWi13fPMlU \
-	-v ${PWD}/wallet.json:/app/config/wallet.json:ro \
+	-e CONTRACT_ID=WbcY2a-KfDpk7fsgumUtLC2bu4NQcVzNlXWi13fPMlU \
 	-e REDIS_URL=redis://default:redispw@localhost:6379 \
 	-p 3030:3030 \
 	dria-hollowdb

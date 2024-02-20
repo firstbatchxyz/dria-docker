@@ -8,6 +8,7 @@ import { SetSDK } from "hollowdb";
 import { LoggerFactory } from "warp-contracts";
 import configurations from "./configurations";
 import { refreshKeys } from "./utilities/refresh";
+import { Redis } from "ioredis";
 
 export async function makeServer(hollowdb: SetSDK<any>, rocksdbPath: string) {
   const server = fastify({
@@ -27,14 +28,26 @@ export async function makeServer(hollowdb: SetSDK<any>, rocksdbPath: string) {
   server.decorate("rocksdbPath", rocksdbPath); // TODO: store RocksDB itself here maybe?
 
   server.addHook("onReady", async function () {
-    // Some async code
-    server.log.info("Waiting for cache to be loaded.");
+    // check redis
+    try {
+      console.log("trying redis");
+      const result = await server.hollowdb.base.warp
+        .kvStorageFactory(server.hollowdb.contractTxId)
+        .storage<Redis>()
+        .ping();
+      console.assert(result === "PONG", "Expected PONG, got:", result);
+    } catch (err) {
+      console.log(err);
+      throw err;
+    }
 
+    // refresh keys
+    server.log.info("Waiting for cache to be loaded.");
     const numKeysRefreshed = await refreshKeys(server);
 
     server.log.info(`Server synced & ready! (${numKeysRefreshed} keys refreshed)`);
     server.log.info(`> Redis: ${configurations.REDIS_URL}`);
-    server.log.info(`> Wallet: ${configurations.WALLET_PATH}`);
+    server.log.info(`> RocksDB: ${configurations.ROCKSDB_PATH}`);
     server.log.info(`> Download URL: ${configurations.DOWNLOAD.BASE_URL} (timeout ${configurations.DOWNLOAD.TIMEOUT})`);
     server.log.info(`> Contract: https://sonar.warp.cc/#/app/contract/${server.contractTxId}`);
   });

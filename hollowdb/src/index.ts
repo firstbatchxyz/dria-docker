@@ -1,32 +1,32 @@
-import { existsSync, readFileSync } from "fs";
 import { SetSDK } from "hollowdb";
 import { Redis } from "ioredis";
 import { makeServer } from "./server";
 import configurations from "./configurations";
 import { createCaches, makeWarp } from "./clients/hollowdb";
-import type { JWKInterface } from "warp-contracts";
 
-const contractTxId = process.env.CONTRACT_TXID;
-if (!contractTxId) {
-  throw new Error("Please provide CONTRACT_TXID environment variable.");
-}
-if (Buffer.from(contractTxId, "base64").toString("hex").length !== 64) {
-  throw new Error("Invalid CONTRACT_TXID.");
-}
-const redisClient = new Redis(configurations.REDIS_URL, {
-  lazyConnect: false, // explicitly connect
-});
+async function main() {
+  const contractId = process.env.CONTRACT_ID;
+  if (!contractId) {
+    throw new Error("Please provide CONTRACT_ID environment variable.");
+  }
+  if (Buffer.from(contractId, "base64").toString("hex").length !== 64) {
+    throw new Error("Invalid CONTRACT_ID.");
+  }
 
-const caches = createCaches(contractTxId, redisClient);
-if (!existsSync(configurations.WALLET_PATH)) {
-  throw new Error("No wallet found at: " + configurations.WALLET_PATH);
-}
-const wallet = JSON.parse(readFileSync(configurations.WALLET_PATH, "utf-8")) as JWKInterface;
-const warp = makeWarp(caches);
+  // ping redis to make sure connection is there before moving on
+  const redisClient = new Redis(configurations.REDIS_URL);
+  await redisClient.ping();
 
-const hollowdb = new SetSDK(wallet, contractTxId, warp);
+  // create Redis caches & use them for Warp
+  const caches = createCaches(contractId, redisClient);
+  const warp = makeWarp(caches);
 
-makeServer(hollowdb, configurations.ROCKSDB_PATH).then(async (server) => {
+  // create a random wallet, which is ok since we only make read operations
+  // TODO: or, we can use a dummy throw-away wallet every time?
+  const wallet = await warp.generateWallet();
+
+  const hollowdb = new SetSDK(wallet.jwk, contractId, warp);
+  const server = await makeServer(hollowdb, configurations.ROCKSDB_PATH);
   const addr = await server.listen({
     port: configurations.PORT,
     // host is set to listen on all interfaces to allow Docker internal network to work
@@ -37,4 +37,6 @@ makeServer(hollowdb, configurations.ROCKSDB_PATH).then(async (server) => {
     },
   });
   server.log.info(`Listening at: ${addr}`);
-});
+}
+
+main();

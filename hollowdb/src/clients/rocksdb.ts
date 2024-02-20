@@ -13,7 +13,6 @@ export class RocksdbClient<V = any> {
     }
 
     this.db = Levelup(Rocksdb(path));
-    // FIXME: if the directory does not exist, it may giving an error...
     this.contractTxId = contractTxId;
   }
 
