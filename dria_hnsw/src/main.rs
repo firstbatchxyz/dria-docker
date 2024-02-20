@@ -3,6 +3,8 @@ use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use dria_hnsw::middlewares::cache::{NodeCache, PointCache};
 use dria_hnsw::worker::{fetch, get_health_status, insert_vector, query};
+use dria_hnsw::db::env::Config;
+
 
 pub fn config(conf: &mut web::ServiceConfig) {
     conf.service(get_health_status);
@@ -16,6 +18,8 @@ async fn main() -> std::io::Result<()> {
     let node_cache = web::Data::new(NodeCache::new());
     let point_cache = web::Data::new(PointCache::new());
 
+    let cfg = Config::new();
+
     let factory = move || {
         App::new()
             .app_data(web::JsonConfig::default().limit(152428800))
@@ -27,6 +31,6 @@ async fn main() -> std::io::Result<()> {
     };
 
     println!("Dria HNSW listening...");
-    HttpServer::new(factory).bind("0.0.0.0:8082")?.run().await?;
+    HttpServer::new(factory).bind(format!("0.0.0.0:{}", cfg.port))?.run().await?;
     Ok(())
 }
