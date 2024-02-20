@@ -27,6 +27,6 @@ async fn main() -> std::io::Result<()> {
     };
 
     println!("Dria HNSW listening...");
-    HttpServer::new(factory).bind("0.0.0.0:8080")?.run().await?;
+    HttpServer::new(factory).bind("0.0.0.0:8082")?.run().await?;
     Ok(())
 }

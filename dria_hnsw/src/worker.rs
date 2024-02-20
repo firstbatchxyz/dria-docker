@@ -28,7 +28,7 @@ use std::time::Instant;
 use tokio::task;
 
 use probly_search::Index;
-use crate::filter::text_based::{create_index_from_docs, Wiki};
+use crate::filter::text_based::{create_index_from_docs, Doc};
 
 pub const SINGLE_THREADED_HNSW_BUILD_THRESHOLD: usize = 256;
 
@@ -60,7 +60,7 @@ pub async fn query(req: HttpRequest, payload: Json<QueryModel>) -> HttpResponse 
             let res = ind.knn_search(&payload.vector, payload.top_n, node_map, point_map);
 
             if payload.query.is_some(){
-                let mut index = Index::<usize>::new(2);
+                let mut index = Index::<usize>::new(1);
                 let results = create_index_from_docs(&mut index, &payload.query.clone().unwrap(),res.clone());
                 let response = CustomResponse {
                     success: true,

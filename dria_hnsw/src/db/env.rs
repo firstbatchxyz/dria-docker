@@ -37,7 +37,7 @@ impl Config {
                 global_rate_limit: "".to_string(),
                 logging_level: "DEBUG".to_string(),
                 redis_url: "redis://127.0.0.1/".to_string(),
-                rocksdb_path: "/tmp/rocksdb".to_string(),
+                rocksdb_path: "/tmp/wikipedia.20220301.en".to_string(),
             },
         }
     }
