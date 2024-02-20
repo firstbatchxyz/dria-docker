@@ -8,8 +8,6 @@ export default {
   REDIS_URL: process.env.REDIS_URL ?? "redis://default:redispw@localhost:6379",
   /** Path to Rocksdb storage. */
   ROCKSDB_PATH: process.env.ROCKSDB_PATH ?? "./data/values",
-  /** Path to Arweave wallet. */
-  WALLET_PATH: process.env.WALLET_PATH ?? "./config/wallet.json",
   /** Treat values as Bundlr txIds. */
   USE_BUNDLR: process.env.USE_BUNDLR ? process.env.USE_BUNDLR === "true" : process.env.NODE_ENV !== "test",
   /** Use the optimized [`hash.txid`](https://github.com/firstbatchxyz/hollowdb/blob/master/src/contracts/hollowdb-htx.contract.ts) layout for values. */

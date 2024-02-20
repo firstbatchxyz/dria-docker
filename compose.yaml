@@ -19,14 +19,14 @@ services:
 
   ### HollowDBs API 'wait-for' script ###
   hollowdb-wait-for:
-    build: ./hollowdb_wait
-    # image: "firstbatch/dria-hollowdb-wait-for"
+    # build: ./hollowdb_wait
+    image: "firstbatch/dria-hollowdb-wait-for"
     environment:
       - TARGET=hollowdb:3000
     depends_on:
       - hollowdb
 
-  ### Wait for HollowDB ###
+  ### HollowDB API ###
   hollowdb:
     build: ./hollowdb
     # image: "firstbatch/dria-hollowdb"
@@ -35,11 +35,10 @@ services:
     expose:
       - "3000" # used by HollowDB wait-for script
     volumes:
-      - ${WALLET}:/app/config/wallet.json:ro
       - ${HOME}/.dria/data:/app/data
     environment:
       - PORT=3000 # HollowDB port
-      - CONTRACT_TXID=${CONTRACT}
+      - CONTRACT_ID=${CONTRACT}
       - ROCKSDB_PATH=/app/data/${CONTRACT}
       - REDIS_URL=redis://default:redispw@redis:6379
       - USE_BUNDLR=true # true if your contract uses Bundlr
