@@ -14,6 +14,7 @@ use std::fmt::format;
 use std::num::FpCategory::Nan;
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::sync::Arc;
+use actix_web::web::Data;
 
 use simsimd::SimSIMD;
 
@@ -49,7 +50,7 @@ pub struct HNSW {
     pub ml: f32,
     pub ef_construction: usize,
     pub ef: usize,
-    pub db: RocksdbClient,
+    pub db: Data<RocksdbClient>,
     quantizer: ScalarQuantizer,
     metric: Option<String>,
 }
@@ -59,13 +60,14 @@ impl HNSW {
         M: usize,
         ef_construction: usize,
         ef: usize,
-        contract_id: String,
-        metric: Option<String>
+        //contract_id: String,
+        metric: Option<String>,
+        db: Data<RocksdbClient>
     ) -> HNSW {
         let m = M;
         let m_max0 = M * 2;
         let ml = 1.0 / (M as f32).ln();
-        let db = RocksdbClient::new(contract_id).expect("Error creating RocksdbClient");
+        //let db = RocksdbClient::new(contract_id).expect("Error creating RocksdbClient");
         let sq = ScalarQuantizer::new(256, 1000, 256);
 
         HNSW {

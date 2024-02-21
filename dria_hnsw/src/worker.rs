@@ -10,7 +10,7 @@ use crate::models::request_models::{FetchModel, InsertBatchModel, QueryModel};
 use crate::proto::index_buffer::{LayerNode, Point};
 use crate::responses::responses::CustomResponse;
 use actix_web::http::StatusCode;
-use actix_web::web::Json;
+use actix_web::web::{Data, Json};
 use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse};
 use dashmap::DashMap;
 use futures_util::future::err;
@@ -44,66 +44,59 @@ pub async fn get_health_status() -> HttpResponse {
 
 #[post("/query")]
 pub async fn query(req: HttpRequest, payload: Json<QueryModel>) -> HttpResponse {
+
     let mut ind: HNSW;
-    match env::var("CONTRACT_ID") {
-        Ok(val) => {
-            ind = HNSW::new(16, 128, ef_helper(payload.level), val.clone(), None);
-            let node_cache = req
-                .app_data::<web::Data<NodeCache>>()
-                .expect("Error getting node cache"); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
-            let point_cache = req
-                .app_data::<web::Data<PointCache>>()
-                .expect("Error getting point cache"); //Arc<DashMap<String, Point>> = Arc::new(DashMap::new());
 
-            let node_map = node_cache.get_cache(val.clone()); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
-            let point_map = point_cache.get_cache(val.clone());
-            let res = ind.knn_search(&payload.vector, payload.top_n, node_map, point_map);
+    let cfg = Config::new();
 
-            if payload.query.is_some(){
-                let mut index = Index::<usize>::new(1);
-                let results = create_index_from_docs(&mut index, &payload.query.clone().unwrap(),res.clone());
-                let response = CustomResponse {
-                    success: true,
-                    data: json!(results),
-                    code: 200,
-                };
-                return HttpResponse::Ok().json(response)
-            }
+    let rocksdb_client = req
+        .app_data::<web::Data<RocksdbClient>>()
+        .expect("Error getting rocksdb client");
 
-            let response = CustomResponse {
-                success: true,
-                data: json!(res),
-                code: 200,
-            };
-            HttpResponse::Ok().json(response)
-        }
-        Err(e) => {
-            let response = CustomResponse {
-                success: false,
-                data: "Contract ID not found inside env variables",
-                code: 400,
-            };
-            return HttpResponse::Forbidden().json(response);
-        }
+    ind = HNSW::new(16, 128, ef_helper(payload.level), None, rocksdb_client.clone());
+    let node_cache = req
+        .app_data::<web::Data<NodeCache>>()
+        .expect("Error getting node cache"); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
+    let point_cache = req
+        .app_data::<web::Data<PointCache>>()
+        .expect("Error getting point cache"); //Arc<DashMap<String, Point>> = Arc::new(DashMap::new());
+
+    let node_map = node_cache.get_cache(cfg.contract_id.clone()); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
+    let point_map = point_cache.get_cache(cfg.contract_id.clone());
+    let res = ind.knn_search(&payload.vector, payload.top_n, node_map, point_map);
+
+    if payload.query.is_some(){
+        let mut index = Index::<usize>::new(1);
+        let results = create_index_from_docs(&mut index, &payload.query.clone().unwrap(),res.clone());
+        let response = CustomResponse {
+            success: true,
+            data: json!(results),
+            code: 200,
+        };
+        return HttpResponse::Ok().json(response)
     }
-}
+
+    let response = CustomResponse {
+        success: true,
+        data: json!(res),
+        code: 200,
+    };
+    HttpResponse::Ok().json(response)
+
+
+    }
 
 #[post("/fetch")]
 pub async fn fetch(req: HttpRequest, payload: Json<FetchModel>) -> HttpResponse {
+
     let mut ind: HNSW;
-    match env::var("CONTRACT_ID") {
-        Ok(val) => {
-            ind = HNSW::new(16, 128, 0, val, None);
-        }
-        Err(e) => {
-            let response = CustomResponse {
-                success: false,
-                data: "Contract ID not found inside env variables",
-                code: 400,
-            };
-            return HttpResponse::Forbidden().json(response);
-        }
-    }
+
+    let rocksdb_client = req
+        .app_data::<web::Data<RocksdbClient>>()
+        .expect("Error getting rocksdb client");
+
+    ind = HNSW::new(16, 128, 0, None, rocksdb_client.clone());
+
     let res = ind.db.get_metadatas(payload.id.clone());
 
     if res.is_err() {
@@ -127,19 +120,15 @@ pub async fn fetch(req: HttpRequest, payload: Json<FetchModel>) -> HttpResponse 
 
 #[post("/insert_vector")]
 pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) -> HttpResponse {
-    let cid = match env::var("CONTRACT_ID") {
-        Ok(cid) => cid,
-        Err(e) => {
-            let response = CustomResponse {
-                success: false,
-                data: "Contract ID not found inside env variables",
-                code: 400,
-            };
-            return HttpResponse::Forbidden().json(response);
-        }
-    };
 
-    //let data = payload.data;
+    let cfg = Config::new();
+    let cid = cfg.contract_id.clone();
+
+    let rocksdb_client = req
+        .app_data::<web::Data<RocksdbClient>>()
+        .expect("Error getting rocksdb client");
+
+    let rocksdb_client = rocksdb_client.clone();
 
     let mut vectors = Vec::new();
     let mut metadata_batch = Vec::new();
@@ -173,8 +162,8 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
             metadata_batch,
             node_map,
             point_map,
-            10_000,
-            cid.clone()
+            rocksdb_client.clone(),
+            10_000
         )
     }).await;
 
@@ -208,11 +197,11 @@ fn train_worker(
     metadata_batch: Vec<Value>,
     node_map: Arc<SynchronizedNodes>,
     point_map: Cache<String, Point>,
-    batch_size: usize,
-    contract_id: String,
+    rocksdb_client: Data<RocksdbClient>,
+    batch_size: usize
 ) -> (String, u16) {
 
-    let ind = HNSW::new(16, 128, ef_helper(Some(1)), contract_id.clone(), None);
+    let ind = HNSW::new(16, 128, ef_helper(Some(1)), None, rocksdb_client.clone());
 
     let mut ds = 0;
     let nl = ind.db.get_num_layers();
