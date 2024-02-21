@@ -1,10 +1,10 @@
 # HollowDB API
 
-TODO
+Each Dria knowledge is a smart-contract on Arweave, which serves the knowledge on permaweb via a key-value interface. To download them, we require HollowDB client, which is a Node package. Here we have a Fastify server that acts as an API for HollowDB, which we primarily use to download & unbundle the values for Dria HNSW to use.
 
-## Setup
+## Installation
 
-install the packages.
+Install the packages:
 
 ```sh
 yarn install
@@ -48,26 +48,23 @@ There are several environment variables to configure the server. You can provide
 
 HollowDB API exposes the following endpoints:
 
-- [`GET`](#get)
-- [`GET_RAW`](#get_raw)
-- [`GET_MANY`](#get_many)
-- [`GET_MANY_RAW`](#get_many_raw)
-- [`PUT`](#put)
-- [`PUT_MANY`](#put_many)
-- [`UPDATE`](#update)
-- [`REMOVE`](#remove)
-- [`STATE`](#state)
-- [`REFRESH`](#refresh)
-- [`CLEAR`](#clear)
+- GET [`/state`](#state)
+- POST [`/get`](#get)
+- POST [`/getRaw`](#getraw)
+- POST [`/getMany`](#getmany)
+- POST [`/getManyRaw `](#getmanyraw)
+- POST [`put`](#put)
+- POST [`putMany`](#putmany)
+- POST [`update`](#update)
+- POST [`remove`](#remove)
+- POST [`refresh`](#refresh)
+- POST [`clear`](#clear)
 
-### `GET`
+### `get`
 
 ```ts
 interface {
-  route: "GET",
-  data: {
-    key: string
-  }
+  key: string
 }
 
 // response body
@@ -78,19 +75,9 @@ interface {
 
 Returns the value at the given key.
 
-> [!TIP]
->
-> Alternatively, any HTTP GET request with a non-empty URI is treated as a key query, where the URI represents the key. For example, a GET request at `http://localhost:3000/key-name` returns the value stored at key `key-name`.
-
-### `GET_RAW`
+### `getRaw`
 
 ```ts
-interface {
-  route: "GET_RAW",
-  data: {
-    key: string
-  }
-}
 
 // response body
 interface {
@@ -98,16 +85,13 @@ interface {
 }
 ```
 
-Returns the value at the given key, directly from the cache layer & without involving Warp or Arweave.
+Returns the value at the given `key`, directly from the cache layer & without involving Warp or Arweave.
 
-### `GET_MANY`
+### `getMany`
 
 ```ts
 interface {
-  route: "GET_MANY",
-  data: {
-    keys: string[]
-  }
+  keys: string[]
 }
 
 // response body
@@ -118,14 +102,11 @@ interface {
 
 Returns the values at the given `keys`.
 
-### `GET_MANY_RAW`
+### `getManyRaw`
 
 ```ts
 interface {
-  route: "GET_MANY_RAW",
-  data: {
-    keys: string[]
-  }
+  keys: string[]
 }
 
 // response body
@@ -139,91 +120,64 @@ Returns the values at the given `keys`, reads directly from the storage.
 This has the advantage of not being bound to the interaction size limit, however, the user must check that the data is fresh with their own methods.
 Furthermore, you must make a call to `REFRESH` before using this endpoint, and subsequent calls to `REFRESH` will update the data with the new on-chain values.
 
-### `PUT`
+### `put`
 
 ```ts
 interface {
-  route: "PUT",
-  data: {
-    key: string,
-    value: any
-  }
+  key: string,
+  value: any
 }
 ```
 
 Puts `value` at the given `key`. The key must not exist already, or it must have `null` stored at it.
 
-### `PUT_MANY`
+### `putMany`
 
 ```ts
 interface {
-  route: "PUT_MANY",
-  data: {
-    keys: string[],
-    values: any[]
-  }
+  keys: string[],
+  values: any[]
 }
 ```
 
 Updates given `keys` with the provided `values`. No key must exist already in the database.
 
-### `UPDATE`
+### `update`
 
 ```ts
 interface {
-  route: "UPDATE",
-  data: {
-    key: string,
-    value: any,
-    proof?: object
-  }
+  key: string,
+  value: any,
+  proof?: object
 }
 ```
 
 Updates a `key` with the provided `value` and an optional `proof`.
 
-### `REMOVE`
+### `remove`
 
 ```ts
 interface {
-  route: "REMOVE",
-  data: {
-    key: string,
-    proof?: object
-  }
+  key: string,
+  proof?: object
 }
 ```
 
 Removes the value at `key`, along with an optional `proof`.
 
-### `STATE`
-
-```ts
-interface {
-  route: "STATE"
-}
-```
+### `state`
 
 Syncs & fetches the latest contract state, and returns it.
 
-### `REFRESH`
-
-```ts
-interface {
-  route: "REFRESH"
-}
-```
+### `refresh`
 
 Syncs & fetches the latest state and stores the latest sort key for each key in the database. Returns the number of keys refreshed for diagnostic purposes.
 
-### `CLEAR`
+### `clear`
 
 ```ts
 interface {
-  route: "CLEAR"
-  data: {
-    keys?: string[]
-  }
+  keys?: string[]
 }
 ```
 
