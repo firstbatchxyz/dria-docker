@@ -1,0 +1,22 @@
+{
+  // for more: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Dria HNSW",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/dria_hnsw/target/debug/dria_hnsw",
+      "args": [],
+      // TODO: change this?
+      "cwd": "${workspaceFolder}",
+      "terminal": "external",
+      "stopOnEntry": false,
+      "sourceLanguages": ["rust"],
+      "env": {
+        "ROCKSDB_PATH": "/Users/erhant/.dria/data/wikipedia.20220301.simple",
+        "CONTRACT_ID": "wikipedia.20220301.simple"
+      }
+    }
+  ]
+}

@@ -16,7 +16,6 @@
 To use Dria Docker, you need:
 
 - [Docker](https://www.docker.com/) installed in your machine.
-- An [Arweave wallet](https://arweave.app/welcome) in your machine, which you will provide via its path.
 - A Dria contract deployed on Arweave to connect to, which you will provide via its transaction ID. The contract ID can be seen on each knowledge deployed to [Dria](https://dria.co/), you can simply use that ID here!
 
 ## Usage
@@ -27,16 +26,16 @@ Download the Docker compose file:
 curl -o compose.yaml -L https://raw.githubusercontent.com/firstbatchxyz/dria-docker/master/compose.yaml
 ```
 
-You can start a Dria container with the following command, where the wallet & contract information is provided as environment variables. Note that the wallet path must start with either relative path `./` or absolute path `/`.
+You can start a Dria container with the following command, where the contract ID is provided as environment variable.
 
 ```sh
-WALLET=./path/to/wallet.json CONTRACT=contract-txid docker compose up
+CONTRACT=contract-txid docker compose up
 ```
 
 When everything is up, you will have access to both Dria and HollowDB on your local network!
 
 - Dria HNSW will be live at `localhost:8080`, see endpoints [here](./dria_hnsw/README.md#endpoints).
-- HollowDB Micro API will be live at `localhost:3030`, see endpoints [here](./micro_api/README.md#endpoints).
+- HollowDB API will be live at `localhost:3030`, see endpoints [here](./hollowdb/README.md#endpoints).
 
 These host ports can also be changed within the [compose file](./compose.yaml), if you have them reserved for other applications.
 

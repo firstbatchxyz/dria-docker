@@ -6,12 +6,12 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InsertModel {
     pub vector: Vec<f32>,
-    pub metadata: Option<Value>,
+    pub metadata: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InsertBatchModel {
-    pub data: String,
+    pub data: Vec<InsertModel>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -23,6 +23,7 @@ pub struct FetchModel {
 pub struct QueryModel {
     pub vector: Vec<f32>,
     pub top_n: usize,
+    pub query: Option<String>,
     pub level: Option<usize>,
 }
 
@@ -30,7 +31,7 @@ impl QueryModel {
     pub fn new(
         vector: Vec<f32>,
         top_n: usize,
-        contract_id: String,
+        query: Option<String>,
         level: Option<usize>,
     ) -> Result<Self, ValidationError> {
         Self::validate_top_n(top_n)?;
@@ -39,6 +40,7 @@ impl QueryModel {
         Ok(QueryModel {
             vector,
             top_n,
+            query,
             level,
         })
     }

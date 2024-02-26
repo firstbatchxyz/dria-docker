@@ -2,11 +2,11 @@ version: "3.8"
 
 services:
   ### Dria HNSW Rust code ###
-  # depends on HollowDB wait-for to complete
   dria-hnsw:
-    # build: ./dria_hnsw
-    image: "firstbatch/dria-hnsw"
+    build: ./dria_hnsw
+    # image: "firstbatch/dria-hnsw"
     environment:
+      - PORT=8080
       - ROCKSDB_PATH=/data/${CONTRACT}
       - REDIS_URL=redis://default:redispw@redis:6379
       - CONTRACT_ID=${CONTRACT}
@@ -19,8 +19,6 @@ services:
         condition: service_completed_successfully
 
   ### HollowDBs API 'wait-for' script ###
-  # will complete when it makes sure HollowDB has refreshed everything
-  # depends on HollowDB to start
   hollowdb-wait-for:
     # build: ./hollowdb_wait
     image: "firstbatch/dria-hollowdb-wait-for"
@@ -29,23 +27,21 @@ services:
     depends_on:
       - hollowdb
 
-  ### Wait for HollowDB ###
-  # depends on Redis to start
+  ### HollowDB API ###
   hollowdb:
-    # TODO: rename micro_api to hollowdb
-    # build: ./micro_api
-    image: "firstbatch/dria-hollowdb"
+    build: ./hollowdb
+    # image: "firstbatch/dria-hollowdb"
     ports:
       - "3000:3000"
     expose:
       - "3000" # used by HollowDB wait-for script
     volumes:
-      - ${WALLET}:/app/config/wallet.json:ro
       - ${HOME}/.dria/data:/app/data
     environment:
+      - PORT=3000
+      - CONTRACT_ID=${CONTRACT}
       - ROCKSDB_PATH=/app/data/${CONTRACT}
       - REDIS_URL=redis://default:redispw@redis:6379
-      - CONTRACT_TXID=${CONTRACT}
       - USE_BUNDLR=true # true if your contract uses Bundlr
       - USE_HTX=true # true if your contract stores values as `hash.txid`
       - BUNDLR_FBS=80 # batch size for downloading bundled values from Arweave

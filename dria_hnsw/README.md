@@ -6,6 +6,12 @@ It is written in Rust, and several functions respect the machine architecture fo
 
 ## Setup
 
+To run the server, you need to provide a contract ID along with a RocksDB path:
+
+```sh
+CONTRACT_ID=<contract-id> ROCKSDB_PATH="path/do/rocksdb" cargo run
+```
+
 Dria HNSW is available as a container:
 
 ```sh
@@ -54,7 +60,7 @@ Response data:
 
 <!-- prettier-ignore -->
 ```ts
-POST /dria/fetch
+POST /fetch
 ```
 
 **Given a list of ids, fetches their corresponding vectors.**
@@ -71,7 +77,7 @@ Response data:
 
 <!-- prettier-ignore -->
 ```ts
-POST /dria/query
+POST /query
 ```
 
 **Given a list of ids, fetches their corresponding vectors.**
@@ -80,6 +86,7 @@ Request body:
 
 - `vector`: an array of floats corresponding to the embedding vector
 - `top_n`: number of results to return
+- `query`: (_optional_) the text that belongs to given embedding, yields better results by looking for this text within the results
 - `level`: (_optional_) an integer value in range [0, 4] that defines the intensity of search, a larger values takes more time to complete but has higher recall
 
 Response data:
@@ -93,7 +100,7 @@ Response data:
 
 <!-- prettier-ignore -->
 ```ts
-POST /dria/insert
+POST /insert_vector
 ```
 
 **Insert a new vector to HNSW.**
