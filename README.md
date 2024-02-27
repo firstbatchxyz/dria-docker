@@ -16,9 +16,31 @@
 To use Dria Docker, you need:
 
 - [Docker](https://www.docker.com/) installed in your machine.
-- A Dria contract deployed on Arweave to connect to, which you will provide via its transaction ID. The contract ID can be seen on each knowledge deployed to [Dria](https://dria.co/), you can simply use that ID here!
+- A Dria contract ID
 
-## Usage
+A Dria contract is the knowledge that is deployed on Arweave; the contract ID can be seen on each knowledge deployed to [Dria](https://dria.co/). For example, consider the Dria knowledge of [The Rust Programming Language](https://dria.co/knowledge/7EZMw0vAAFaKVMNOmu2rFgFCFjRD2C2F0kI_N5Cv6QQ):
+
+- <https://dria.co/knowledge/7EZMw0vAAFaKVMNOmu2rFgFCFjRD2C2F0kI_N5Cv6QQ>
+
+The base64 URL there is our contract ID, and it can also be seen at the top of the page at that link.
+
+### Using Dria CLI
+
+The preferred method of using Dria Docker is via the [Dria CLI](https://github.com/firstbatchxyz/dria-cli/), which is an NPM package.
+
+```sh
+npm i -g dria-cli
+```
+
+You can see available commands with:
+
+```sh
+dria help
+```
+
+See the [docs](https://github.com/firstbatchxyz/dria-cli/?tab=readme-ov-file#usage) of Dria CLI for more.
+
+### Using Compose
 
 Download the Docker compose file:
 
@@ -29,8 +51,10 @@ curl -o compose.yaml -L https://raw.githubusercontent.com/firstbatchxyz/dria-doc
 You can start a Dria container with the following command, where the contract ID is provided as environment variable.
 
 ```sh
-CONTRACT=contract-txid docker compose up
+CONTRACT=contract-id docker compose up
 ```
+
+## Usage
 
 When everything is up, you will have access to both Dria and HollowDB on your local network!
 
