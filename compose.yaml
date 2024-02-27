@@ -3,8 +3,8 @@ version: "3.8"
 services:
   ### Dria HNSW Rust code ###
   dria-hnsw:
-    build: ./dria_hnsw
-    # image: "firstbatch/dria-hnsw"
+    #build: ./dria_hnsw
+    image: "firstbatch/dria-hnsw"
     environment:
       - PORT=8080
       - ROCKSDB_PATH=/data/${CONTRACT}
@@ -29,8 +29,8 @@ services:
 
   ### HollowDB API ###
   hollowdb:
-    build: ./hollowdb
-    # image: "firstbatch/dria-hollowdb"
+    #build: ./hollowdb
+    image: "firstbatch/dria-hollowdb"
     ports:
       - "3000:3000"
     expose:
