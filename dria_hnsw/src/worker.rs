@@ -27,8 +27,8 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::task;
 
-use probly_search::Index;
 use crate::filter::text_based::{create_index_from_docs, Doc};
+use probly_search::Index;
 
 pub const SINGLE_THREADED_HNSW_BUILD_THRESHOLD: usize = 256;
 
@@ -44,7 +44,6 @@ pub async fn get_health_status() -> HttpResponse {
 
 #[post("/query")]
 pub async fn query(req: HttpRequest, payload: Json<QueryModel>) -> HttpResponse {
-
     let mut ind: HNSW;
 
     let cfg = Config::new();
@@ -53,7 +52,13 @@ pub async fn query(req: HttpRequest, payload: Json<QueryModel>) -> HttpResponse 
         .app_data::<web::Data<RocksdbClient>>()
         .expect("Error getting rocksdb client");
 
-    ind = HNSW::new(16, 128, ef_helper(payload.level), None, rocksdb_client.clone());
+    ind = HNSW::new(
+        16,
+        128,
+        ef_helper(payload.level),
+        None,
+        rocksdb_client.clone(),
+    );
     let node_cache = req
         .app_data::<web::Data<NodeCache>>()
         .expect("Error getting node cache"); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
@@ -65,15 +70,16 @@ pub async fn query(req: HttpRequest, payload: Json<QueryModel>) -> HttpResponse 
     let point_map = point_cache.get_cache(cfg.contract_id.clone());
     let res = ind.knn_search(&payload.vector, payload.top_n, node_map, point_map);
 
-    if payload.query.is_some(){
+    if payload.query.is_some() {
         let mut index = Index::<usize>::new(1);
-        let results = create_index_from_docs(&mut index, &payload.query.clone().unwrap(),res.clone());
+        let results =
+            create_index_from_docs(&mut index, &payload.query.clone().unwrap(), res.clone());
         let response = CustomResponse {
             success: true,
             data: json!(results),
             code: 200,
         };
-        return HttpResponse::Ok().json(response)
+        return HttpResponse::Ok().json(response);
     }
 
     let response = CustomResponse {
@@ -82,13 +88,10 @@ pub async fn query(req: HttpRequest, payload: Json<QueryModel>) -> HttpResponse 
         code: 200,
     };
     HttpResponse::Ok().json(response)
-
-
-    }
+}
 
 #[post("/fetch")]
 pub async fn fetch(req: HttpRequest, payload: Json<FetchModel>) -> HttpResponse {
-
     let mut ind: HNSW;
 
     let rocksdb_client = req
@@ -120,7 +123,6 @@ pub async fn fetch(req: HttpRequest, payload: Json<FetchModel>) -> HttpResponse 
 
 #[post("/insert_vector")]
 pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) -> HttpResponse {
-
     let cfg = Config::new();
     let cid = cfg.contract_id.clone();
 
@@ -132,7 +134,7 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
 
     let mut vectors = Vec::new();
     let mut metadata_batch = Vec::new();
-    for d in  payload.data.iter() {
+    for d in payload.data.iter() {
         vectors.push(d.vector.clone());
         metadata_batch.push(d.metadata.clone());
     }
@@ -143,6 +145,7 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
             data: "Batch size should be smaller than 2500.".to_string(),
             code: 401,
         };
+        // TODO: fix status code
         return HttpResponse::InternalServerError().json(response);
     }
 
@@ -163,9 +166,10 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
             node_map,
             point_map,
             rocksdb_client.clone(),
-            10_000
+            10_000,
         )
-    }).await;
+    })
+    .await;
 
     let node_map = node_cache.get_cache(cid_clone); //Arc<SynchronizedNodes> = Arc::new(SynchronizedNodes::new());
     node_map.reset();
@@ -184,7 +188,6 @@ pub async fn insert_vector(req: HttpRequest, payload: Json<InsertBatchModel>) ->
         data: "Values are successfully added to index.".to_string(),
         code: 200,
     });
-
 }
 
 fn ef_helper(ef: Option<usize>) -> usize {
@@ -198,9 +201,8 @@ fn train_worker(
     node_map: Arc<SynchronizedNodes>,
     point_map: Cache<String, Point>,
     rocksdb_client: Data<RocksdbClient>,
-    batch_size: usize
+    batch_size: usize,
 ) -> (String, u16) {
-
     let ind = HNSW::new(16, 128, ef_helper(Some(1)), None, rocksdb_client.clone());
 
     let mut ds = 0;

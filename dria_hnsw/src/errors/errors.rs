@@ -1,13 +1,11 @@
 use actix_web::{
     error::ResponseError,
     http::{header::ContentType, StatusCode},
-    App, HttpResponse,
+    HttpResponse,
 };
 use derive_more::{Display, Error};
 use std::fmt;
-use std::fmt::Formatter;
 
-// Define an enum for your custom error types
 #[derive(Debug)]
 pub enum DeserializeError {
     MissingKey,
@@ -18,23 +16,21 @@ pub enum DeserializeError {
     ClusterConnectionError,
 }
 
-// Implementing std::fmt::Display for DeserializeError
 impl fmt::Display for DeserializeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             DeserializeError::MissingKey => write!(f, "Key is missing in the response"),
             DeserializeError::InvalidForm => write!(f, "Value is not in the expected format"),
-            DeserializeError::RocksDBConnectionError => write!(f, "Error connecting to RocksDB"), // Add this line
-            DeserializeError::RedisConnectionError => write!(f, "Error connecting to Redis"), // Add this line
-            DeserializeError::DNSResolverError => write!(f, "Error resolving DNS"), // Add this line
+            DeserializeError::RocksDBConnectionError => write!(f, "Error connecting to RocksDB"),
+            DeserializeError::RedisConnectionError => write!(f, "Error connecting to Redis"),
+            DeserializeError::DNSResolverError => write!(f, "Error resolving DNS"),
             DeserializeError::ClusterConnectionError => {
                 write!(f, "Error connecting to Cluster at init")
-            } // Add this line
+            }
         }
     }
 }
 
-// Implementing std::error::Error for DeserializeError
 impl std::error::Error for DeserializeError {}
 
 #[derive(Debug, Display, Error)]
@@ -64,3 +60,14 @@ impl ResponseError for MiddlewareError {
         }
     }
 }
+
+#[derive(Debug)]
+pub struct ValidationError(pub String);
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for ValidationError {}

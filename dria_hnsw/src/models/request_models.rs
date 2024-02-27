@@ -1,7 +1,7 @@
-use core::fmt;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
+
+use crate::errors::errors::ValidationError;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InsertModel {
@@ -16,7 +16,7 @@ pub struct InsertBatchModel {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FetchModel {
-    pub id: Vec<u32>,
+    pub id: Vec<u32>, // TODO: rename this to `ids`
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -66,14 +66,3 @@ impl QueryModel {
         }
     }
 }
-
-#[derive(Debug)]
-pub struct ValidationError(String);
-
-impl fmt::Display for ValidationError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::error::Error for ValidationError {}

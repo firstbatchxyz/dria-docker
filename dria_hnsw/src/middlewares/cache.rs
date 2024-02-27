@@ -1,6 +1,5 @@
 use crate::hnsw::sync_map::SynchronizedNodes;
-use crate::proto::index_buffer::{Point, PointQuant};
-use dashmap::DashMap;
+use crate::proto::index_buffer::Point;
 use std::sync::Arc;
 
 use mini_moka::sync::Cache;

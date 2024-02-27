@@ -1,6 +1,5 @@
 use serde::Deserialize;
 use std::env;
-use std::env::VarError;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -21,12 +20,12 @@ impl Config {
     pub fn new() -> Config {
         let rocksdb_path = match env::var("ROCKSDB_PATH") {
             Ok(val) => val,
-            Err(_) => "/tmp/rocksdb".to_string()
+            Err(_) => "/tmp/rocksdb".to_string(),
         };
 
         let port = match env::var("PORT") {
             Ok(val) => val,
-            Err(_) => "8080".to_string()
+            Err(_) => "8080".to_string(),
         };
 
         let contract_id = match env::var("CONTRACT_ID") {
@@ -36,7 +35,6 @@ impl Config {
                 "default".to_string()
             }
         };
-
 
         Config {
             env: "development".to_string(),
