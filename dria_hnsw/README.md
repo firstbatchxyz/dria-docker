@@ -1,15 +1,14 @@
 # Dria HNSW
 
 Dria HNSW is an API that allows you to permissionlessly search knowledge uploaded to Dria. It works over values downloaded from Arweave to a Redis cache, and reads these values directly from Redis.
-
-It is written in Rust, and several functions respect the machine architecture for efficiency. In line with this, the docker image is built for 4 different architectures, as supported by the [offical Rust image](https://hub.docker.com/_/rust/).
+It is written in Rust, and several functions respect the machine architecture for efficiency.
 
 ## Setup
 
 To run the server, you need to provide a contract ID along with a RocksDB path:
 
 ```sh
-CONTRACT_ID=<contract-id> ROCKSDB_PATH="path/do/rocksdb" cargo run
+CONTRACT_ID=<contract-id> ROCKSDB_PATH="/path/to/rocksdb" cargo run
 ```
 
 Dria HNSW is available as a container:
@@ -29,9 +28,9 @@ To see the available endpoints, refer to [this section](#endpoints) below.
 Dria is an [Actix](https://actix.rs/) server with the following endpoints:
 
 - [`health`](#health)
-- [`dria/fetch`](#fetch)
-- [`dria/query`](#query)
-- [`dria/insert`](#insert)
+- [`fetch`](#fetch)
+- [`query`](#query)
+- [`insert_vector`](#insert_vector)
 
 All endpoints return a response in the following format:
 
@@ -96,7 +95,7 @@ Response data:
   - `score`: relevance score
   - `metadata`: metadata of the vector
 
-### `INSERT`
+### `INSERT_VECTOR`
 
 <!-- prettier-ignore -->
 ```ts
