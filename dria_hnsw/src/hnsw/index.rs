@@ -2,19 +2,13 @@
 
 extern crate redis;
 
+use actix_web::web::Data;
 use hashbrown::HashSet;
+use mini_moka::sync::Cache;
 use redis::Commands;
+use std::borrow::Borrow;
 use std::cmp::Reverse;
 use std::collections::HashMap;
-
-use actix_web::web::Data;
-use ahash::AHashMap;
-use dashmap::{DashMap, DashSet};
-use mini_moka::sync::Cache;
-use std::borrow::Borrow;
-use std::f32::NAN;
-use std::fmt::format;
-use std::num::FpCategory::Nan;
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -24,7 +18,6 @@ use rand::{thread_rng, Rng, SeedableRng};
 
 use crate::proto::index_buffer::{LayerNode, Point};
 use prost::Message;
-use prost_types::Any; // For handling the Any type
 
 use crate::errors::errors::DeserializeError;
 use crate::hnsw::utils::{create_max_heap, create_min_heap, IntoHeap, IntoMap, Numeric};
@@ -35,7 +28,6 @@ use serde_json::{json, Value};
 
 use crate::db::rocksdb_client::RocksdbClient;
 use crate::hnsw::sync_map::SynchronizedNodes;
-use tokio::time::Instant;
 
 pub const SINGLE_THREADED_HNSW_BUILD_THRESHOLD: usize = 256;
 

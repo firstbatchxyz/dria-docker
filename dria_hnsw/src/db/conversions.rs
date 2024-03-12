@@ -83,7 +83,7 @@ mod tests {
     }
 
     #[test]
-    fn test_node_to_base64_empty_string() {
+    fn test_node_to_base64_from_string() {
         let node = LayerNode {
             level: 1,
             idx: 1,

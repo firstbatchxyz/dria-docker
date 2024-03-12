@@ -1,21 +1,23 @@
 use crate::hnsw::sync_map::SynchronizedNodes;
 use crate::proto::index_buffer::Point;
-use std::sync::Arc;
-
 use mini_moka::sync::Cache;
-
+use std::sync::Arc;
 use std::time::Duration;
 
 pub struct NodeCache {
     pub caches: Cache<String, Arc<SynchronizedNodes>>,
 }
 
+/// If a key within cache is not used (i.e. get or insert) for the given duration (seconds), expire that key.
+const NODE_CACHE_EXPIRE: u64 = 48 * 60 * 60; // 2 days
+/// Maximum capacity of the cache, in number of keys.
+const NODE_CACHE_CAPACITY: u64 = 5_000;
+
 impl NodeCache {
     pub fn new() -> Self {
         let cache = Cache::builder()
-            //if a key is not used (get or insert) for 2 days hour, expire it
-            .time_to_idle(Duration::from_secs(48 * 60 * 60))
-            .max_capacity(5_000)
+            .time_to_idle(Duration::from_secs(NODE_CACHE_EXPIRE))
+            .max_capacity(NODE_CACHE_CAPACITY)
             .build();
 
         NodeCache { caches: cache }
@@ -23,13 +25,13 @@ impl NodeCache {
 
     pub fn get_cache(&self, key: String) -> Arc<SynchronizedNodes> {
         let my_cache = self.caches.clone();
-        //let cache = my_cache.entry(key.to_string()).or_insert_with(|| Arc::new(SynchronizedNodes::new()));
-
         let node_cache = my_cache.get(&key).unwrap_or_else(|| {
             let new_cache = Arc::new(SynchronizedNodes::new());
             my_cache.insert(key.to_string(), new_cache.clone());
             new_cache
         });
+
+        // TODO: clone required here?
         node_cache.clone()
     }
 
@@ -39,6 +41,11 @@ impl NodeCache {
     }
 }
 
+/// If a key within cache is not used (i.e. get or insert) for the given duration (seconds), expire that key.
+const POINT_CACHE_EXPIRE: u64 = 24 * 60 * 60; // 1 days
+/// Maximum capacity of the cache, in number of keys.
+const POINT_CACHE_CAPACITY: u64 = 5_000;
+
 pub struct PointCache {
     pub caches: Cache<String, Cache<String, Point>>, //Cache<String, Arc<DashMap<String, Point>>>,
 }
@@ -46,9 +53,8 @@ pub struct PointCache {
 impl PointCache {
     pub fn new() -> Self {
         let cache = Cache::builder()
-            //if a key is not used (get or insert) for 2 hour, expire it
-            .time_to_idle(Duration::from_secs(24 * 60 * 60))
-            .max_capacity(5_000) // around 106MB for 1536 dim vectors
+            .time_to_idle(Duration::from_secs(POINT_CACHE_EXPIRE))
+            .max_capacity(POINT_CACHE_CAPACITY) // around 106MB for 1536 dim vectors
             .build();
 
         PointCache { caches: cache }
@@ -67,6 +73,8 @@ impl PointCache {
             my_cache.insert(key.to_string(), new_cache.clone());
             new_cache
         });
+
+        // TODO: clone required here?
         point_cache.clone()
     }
 
@@ -93,8 +101,11 @@ mod tests {
         }
 
         let ix = cache.get(&"0".to_string());
-        print!("ix: {:?}", ix);
+        assert_eq!(ix, Some(0));
+    }
 
+    #[test]
+    fn test_weighted_cache() {
         let current_weight = AtomicU32::new(1); // Start weights from 1 to avoid assigning a weight of 0
 
         let cache = Cache::builder()
@@ -112,6 +123,6 @@ mod tests {
         }
 
         let ix = cache.get(&0);
-        print!("ix: {:?}", ix);
+        assert_eq!(ix, Some("Value 0".to_string()));
     }
 }

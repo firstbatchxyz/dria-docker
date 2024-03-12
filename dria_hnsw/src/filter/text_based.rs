@@ -30,12 +30,12 @@ pub fn create_index_from_docs(
     for value in metadata.iter() {
         let mut text = value["metadata"]["text"].as_str();
         if text.is_none() {
-            //use whole metadata as text
+            // use whole metadata as text
             text = value["metadata"].as_str();
         }
 
         let id_doc = value["id"].as_u64().unwrap() as usize;
-        let url = value["metadata"]["url"].as_str();
+        // let url = value["metadata"]["url"].as_str();
 
         let t = text.unwrap().to_string();
 

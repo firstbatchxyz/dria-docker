@@ -1,6 +1,3 @@
-use crate::db::conversions::{
-    base64_to_batch_str, base64_to_batch_vec, base64_to_singleton_str, base64_to_singleton_vec,
-};
 use crate::db::env::Config;
 use crate::db::rocksdb_client::RocksdbClient;
 use crate::hnsw::index::HNSW;
@@ -9,25 +6,19 @@ use crate::middlewares::cache::{NodeCache, PointCache};
 use crate::models::request_models::{FetchModel, InsertBatchModel, QueryModel};
 use crate::proto::index_buffer::{LayerNode, Point};
 use crate::responses::responses::CustomResponse;
-use actix_web::http::StatusCode;
 use actix_web::web::{Data, Json};
 use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse};
-use dashmap::DashMap;
-use futures_util::future::err;
-use log::{debug, error, info, trace, warn};
+use log::error;
 use mini_moka::sync::Cache;
 use rayon::prelude::*;
-use rayon::ThreadPool;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::borrow::Borrow;
-use std::env;
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::time::Instant;
 use tokio::task;
 
-use crate::filter::text_based::{create_index_from_docs, Doc};
+use crate::filter::text_based::create_index_from_docs;
 use probly_search::Index;
 
 pub const SINGLE_THREADED_HNSW_BUILD_THRESHOLD: usize = 256;
@@ -44,7 +35,7 @@ pub async fn get_health_status() -> HttpResponse {
 
 #[post("/query")]
 pub async fn query(req: HttpRequest, payload: Json<QueryModel>) -> HttpResponse {
-    let mut ind: HNSW;
+    let ind: HNSW;
 
     let cfg = Config::new();
 
@@ -92,7 +83,7 @@ pub async fn query(req: HttpRequest, payload: Json<QueryModel>) -> HttpResponse 
 
 #[post("/fetch")]
 pub async fn fetch(req: HttpRequest, payload: Json<FetchModel>) -> HttpResponse {
-    let mut ind: HNSW;
+    let ind: HNSW;
 
     let rocksdb_client = req
         .app_data::<web::Data<RocksdbClient>>()
@@ -326,4 +317,82 @@ fn train_worker(
         return ("Error writing batch to blockchain".to_string(), 500);
     }
     return ("Values are successfully added to index.".to_string(), 200);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::{http::header::ContentType, test, App};
+    use rand::{self, Rng};
+    use simple_home_dir::home_dir;
+    use std::env;
+
+    fn prepare_env() -> () {
+        const CONTRACT_ID: &str = "WbcY2a-KfDpk7fsgumUtLC2bu4NQcVzNlXWi13fPMlU";
+
+        env::set_var("CONTRACT_ID", CONTRACT_ID);
+        let mut rocksdb_path = home_dir().unwrap().to_str().unwrap().to_owned();
+        rocksdb_path.push_str("/.dria/data/");
+        rocksdb_path.push_str(CONTRACT_ID);
+        env::set_var("ROCKSDB_PATH", rocksdb_path);
+    }
+
+    fn prepare_rocksdb() -> Data<RocksdbClient> {
+        let cfg = Config::new();
+        let rocksdb_client = RocksdbClient::new(cfg.contract_id.clone()).unwrap();
+        web::Data::new(rocksdb_client)
+    }
+
+    #[actix_web::test]
+    async fn test_health() {
+        let app = test::init_service(App::new().configure(|conf| {
+            conf.service(get_health_status);
+        }))
+        .await;
+
+        let req = test::TestRequest::get()
+            .uri("/health")
+            .insert_header(ContentType::plaintext())
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+    }
+
+    #[actix_web::test]
+    async fn test_fetch_and_query() {
+        prepare_env();
+        let rocksdb_client = prepare_rocksdb();
+        let node_cache = web::Data::new(NodeCache::new());
+        let point_cache = web::Data::new(PointCache::new());
+        let app = test::init_service(
+            App::new()
+                .app_data(rocksdb_client)
+                .app_data(node_cache)
+                .app_data(point_cache)
+                .configure(|conf| {
+                    conf.service(query).service(fetch);
+                }),
+        )
+        .await;
+
+        // fetch
+        let req = test::TestRequest::post()
+            .uri("/fetch")
+            .set_json(json!({ "id": [0] }))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+
+        // query
+        let query_vector: Vec<f64> = (0..768).map(|_| rand::thread_rng().gen()).collect();
+        let req = test::TestRequest::post()
+            .uri("/query")
+            .set_json(json!({
+                "vector": query_vector,
+                "top_n": 10
+            }))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+    }
 }

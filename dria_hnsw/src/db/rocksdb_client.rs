@@ -4,11 +4,7 @@ use crate::errors::errors::DeserializeError;
 use crate::proto::index_buffer::{LayerNode, Point};
 use prost::Message;
 use rocksdb;
-use rocksdb::{
-    DBWithThreadMode, MultiThreaded, Options, WriteBatch, WriteBatchWithTransaction, DB,
-};
-use serde::de::Unexpected::Option;
-use serde_json::map::Values;
+use rocksdb::{DBWithThreadMode, Options, WriteBatch, DB};
 use serde_json::Value;
 
 #[derive(Debug)]
