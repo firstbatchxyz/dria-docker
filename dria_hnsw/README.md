@@ -113,3 +113,19 @@ Request body:
 Response data:
 
 - A string `"Success"`.
+
+## Testing
+
+We have several tests that you can run with:
+
+```sh
+cargo test
+```
+
+Some tests expect a RocksDB folder present at `$HOME/.dria/data/WbcY2a-KfDpk7fsgumUtLC2bu4NQcVzNlXWi13fPMlU`, which can easily be downloaded with the [Dria CLI](https://github.com/firstbatchxyz/dria-cli/) if you do not have it:
+
+```sh
+dria pull WbcY2a-KfDpk7fsgumUtLC2bu4NQcVzNlXWi13fPMlU
+```
+
+The said knowledge is a rather lightweight knowledge that is useful for testing.
