@@ -5,8 +5,7 @@ use hashbrown::HashSet;
 use std::collections::HashMap;
 use std::sync::Arc;
 //use tokio::sync::{Mutex, RwLock, RwLockWriteGuard};
-use mini_moka::sync::Cache;
-use parking_lot::{Mutex, RwLock, RwLockWriteGuard};
+use parking_lot::{Mutex, RwLock};
 use std::time::Duration;
 
 //static ref RESET_SIZE =  120_000;
@@ -14,7 +13,7 @@ use std::time::Duration;
 pub struct SynchronizedNodes {
     pub map: Arc<DashMap<String, LayerNode>>, //Cache<String, LayerNode>,  //Arc<DashMap<String, LayerNode>>,
     pub lock_map: Arc<DashMap<String, RwLock<()>>>,
-    wait_map: Mutex<HashMap<String, (Sender<()>, Receiver<()>)>>
+    wait_map: Mutex<HashMap<String, (Sender<()>, Receiver<()>)>>,
 }
 
 impl SynchronizedNodes {
@@ -26,9 +25,7 @@ impl SynchronizedNodes {
         }
     }
 
-
-    pub fn reset(&self)
-    {
+    pub fn reset(&self) {
         if self.map.len() > 120_000 {
             self.map.clear();
         }
@@ -164,14 +161,15 @@ impl SynchronizedNodes {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::db::conversions::{base64_to_node, node_to_base64};
-    use crate::proto::index_buffer::LayerNode;
-    use crate::proto::index_buffer::Point;
-    use std::sync::Arc;
-    use std::thread;
-    use std::time::Duration;
+    // use super::*;
+    // use crate::db::conversions::{base64_to_node, node_to_base64};
+    // use crate::proto::index_buffer::LayerNode;
+    // use crate::proto::index_buffer::Point;
+    // use std::sync::Arc;
+    // use std::thread;
+    // use std::time::Duration;
 
     #[test]
+    #[ignore = "todo"]
     fn test_synchronized_nodes() {}
 }

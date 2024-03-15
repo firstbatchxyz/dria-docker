@@ -1,20 +1,16 @@
+#![allow(non_snake_case)]
+
 extern crate redis;
 
+use actix_web::web::Data;
 use hashbrown::HashSet;
+use mini_moka::sync::Cache;
 use redis::Commands;
+use std::borrow::Borrow;
 use std::cmp::Reverse;
 use std::collections::HashMap;
-
-use ahash::AHashMap;
-use dashmap::{DashMap, DashSet};
-use mini_moka::sync::Cache;
-use std::borrow::Borrow;
-use std::f32::NAN;
-use std::fmt::format;
-use std::num::FpCategory::Nan;
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 use std::sync::Arc;
-use actix_web::web::Data;
 
 use simsimd::SimSIMD;
 
@@ -22,7 +18,6 @@ use rand::{thread_rng, Rng, SeedableRng};
 
 use crate::proto::index_buffer::{LayerNode, Point};
 use prost::Message;
-use prost_types::Any; // For handling the Any type
 
 use crate::errors::errors::DeserializeError;
 use crate::hnsw::utils::{create_max_heap, create_min_heap, IntoHeap, IntoMap, Numeric};
@@ -31,9 +26,8 @@ use crate::hnsw::scalar::ScalarQuantizer;
 use rayon::prelude::*;
 use serde_json::{json, Value};
 
-use crate::hnsw::sync_map::SynchronizedNodes;
-use tokio::time::Instant;
 use crate::db::rocksdb_client::RocksdbClient;
+use crate::hnsw::sync_map::SynchronizedNodes;
 
 pub const SINGLE_THREADED_HNSW_BUILD_THRESHOLD: usize = 256;
 
@@ -62,7 +56,7 @@ impl HNSW {
         ef: usize,
         //contract_id: String,
         metric: Option<String>,
-        db: Data<RocksdbClient>
+        db: Data<RocksdbClient>,
     ) -> HNSW {
         let m = M;
         let m_max0 = M * 2;
@@ -102,7 +96,6 @@ impl HNSW {
     }
 
     fn distance(&self, x: &[f32], y: &[f32], dist: &Option<String>) -> f32 {
-
         let dist = match dist.as_ref().map(String::as_str) {
             Some("sqeuclidean") => SimSIMD::sqeuclidean(x, y),
             Some("inner") => SimSIMD::inner(x, y),
@@ -304,6 +297,7 @@ impl HNSW {
                     nodes[idx_i].neighbors.insert(*e_i, *dist);
                 }
 
+                // TODO: remove redundant
                 for (i, (e_i, dist)) in neighbors.iter().enumerate() {
                     if i == idx_i {
                         // We want to skip last layernode, which is idx -> layernode
@@ -479,7 +473,7 @@ impl HNSW {
                 .expect("Error searching layer");
             ep = W;
         }
-        
+
         let ep_ = self
             .search_layer(q, ep, self.ef, 0, node_map.clone(), point_map.clone())
             .expect("Error searching layer");

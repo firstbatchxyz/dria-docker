@@ -6,7 +6,6 @@ use crate::db::env::Config;
 use crate::errors::errors::DeserializeError;
 use crate::proto::index_buffer::{LayerNode, Point};
 use prost::Message;
-use serde_json::map::Values;
 use serde_json::Value;
 
 pub struct RedisClient {

@@ -1,6 +1,6 @@
 use probly_search::score::ScoreCalculator;
 use probly_search::score::{bm25, zero_to_one};
-use probly_search::{Index, QueryResult};
+use probly_search::Index;
 use serde_json::{json, Value};
 use std::borrow::Cow;
 
@@ -28,15 +28,14 @@ pub fn create_index_from_docs(
     let mut iter = 0;
 
     for value in metadata.iter() {
-
         let mut text = value["metadata"]["text"].as_str();
         if text.is_none() {
-            //use whole metadata as text
+            // use whole metadata as text
             text = value["metadata"].as_str();
         }
 
         let id_doc = value["id"].as_u64().unwrap() as usize;
-        let url = value["metadata"]["url"].as_str();
+        // let url = value["metadata"]["url"].as_str();
 
         let t = text.unwrap().to_string();
 
@@ -60,15 +59,10 @@ pub fn create_index_from_docs(
     }
 
     for wiki in wikis.iter() {
-        index.add_document(
-            &[text_extract],
-            tokenizer,
-            wiki.id.clone(),
-            &wiki,
-        );
+        index.add_document(&[text_extract], tokenizer, wiki.id.clone(), &wiki);
     }
 
-    let results = index.query(query, &mut zero_to_one::new(), tokenizer, &vec![1.]);
+    let results = index.query(query, &mut zero_to_one::new(), tokenizer, &[1.]);
     let mut results_as_wiki = vec![];
     for res in results.iter() {
         let val = json!({"id": ids[res.key], "metadata": query_results[res.key].clone(), "score": res.score});

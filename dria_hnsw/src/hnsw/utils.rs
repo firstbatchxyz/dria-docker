@@ -65,11 +65,11 @@ impl IntoHeap<Numeric> for Vec<(f32, u32)> {
 }
 
 pub fn create_min_heap() -> BinaryHeap<Reverse<(Numeric, u32)>> {
-    let mut q: BinaryHeap<Reverse<(Numeric, u32)>> = BinaryHeap::new();
+    let q: BinaryHeap<Reverse<(Numeric, u32)>> = BinaryHeap::new();
     q
 }
 
 pub fn create_max_heap() -> BinaryHeap<(Numeric, u32)> {
-    let mut q: BinaryHeap<(Numeric, u32)> = BinaryHeap::new();
+    let q: BinaryHeap<(Numeric, u32)> = BinaryHeap::new();
     q
 }
